@@ -247,11 +247,14 @@ def process(args):
     Flownet = FlowNet2(args)
     print(f"Loading pretrained model from '{args.pretrained_model_flownet2}'.")
     flownet2_ckpt = torch.load(args.pretrained_model_flownet2)
+    print("loading is ok")
+
     Flownet.load_state_dict(flownet2_ckpt["state_dict"])
     Flownet.to(device)
     Flownet.eval()
 
     for im1, im2, out in zip(args.im1, args.im2, args.out):
+        print (im1)
         if os.path.isfile(out):
             continue
 
