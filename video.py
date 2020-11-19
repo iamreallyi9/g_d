@@ -50,6 +50,7 @@ class Video:
         return False
 
     def extract_pts(self):
+        print ("here ,now in extract_pts")
         if self.check_extracted_pts():
             # frames.txt exists and checked OK.
             return
@@ -59,6 +60,7 @@ class Video:
 
         # Get width and height
         tmp_file = tempfile.mktemp(".png")
+        print (tmp_file)
         cmd = "%s -i %s -vframes 1 %s" % (ffmpeg, self.video_file, tmp_file)
         print(cmd)
         res = os.popen(cmd).read()
