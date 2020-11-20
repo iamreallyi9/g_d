@@ -240,7 +240,7 @@ class DepthFineTuner:
 
         self.model.train()
         #gj.add.visuall
-        summary(self.model, torch.zeros(1,3,1024, 320))
+        summary(self.model, torch.zeros(1,3,224, 224))
 
 
 
