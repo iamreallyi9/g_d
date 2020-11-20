@@ -54,8 +54,6 @@ class MannequinChallengeModel(DepthModel):
 
         # Reshape ...CHW -> XCHW
         shape = images.shape
-        "here----"
-        print(shape)
         C, H, W = shape[-3:]
         images = images.reshape(-1, C, H, W)
 
