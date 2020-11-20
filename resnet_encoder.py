@@ -85,7 +85,7 @@ class ResnetEncoder(nn.Module):
             self.num_ch_enc[1:] *= 4
 
     def forward(self, input_image):
-        "gj...see the size of net"
+        "gj...see the size of net,and pl"
 
         print(np.shape(input_image))
         print("asssmmmmmmmmmmmm")
