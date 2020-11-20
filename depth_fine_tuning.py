@@ -23,7 +23,7 @@ from loss.joint_loss import JointLoss
 from loss.loss_params import LossParams
 from utils import image_io, visualization
 from utils.torch_helpers import to_device
-from torchsummary import summary
+from torchsummaryX import summary
 
 class DepthFineTuningParams:
     """Options about finetune parameters.
