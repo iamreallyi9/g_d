@@ -54,9 +54,12 @@ class MannequinChallengeModel(DepthModel):
 
         # Reshape ...CHW -> XCHW
         shape = images.shape
+        "here----"
+        print(shape)
         C, H, W = shape[-3:]
         images = images.reshape(-1, C, H, W)
-
+        print("shape is kkkkkkkk")
+        print(images.shape)
         self.model.prediction_d, _ = self.model.netG.forward(images)
 
         # Reshape X1HW -> BNHW
