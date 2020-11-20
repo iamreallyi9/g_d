@@ -243,9 +243,7 @@ class DepthFineTuner:
 
 
         print ("83")
-
-
-        iut = torch.randn(1,3,224,384)
+        iut = torch.randn(1,3,384,224)
         summary(self.model, iut)
 
 
