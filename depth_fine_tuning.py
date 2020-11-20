@@ -245,8 +245,8 @@ class DepthFineTuner:
         print ("83")
 
 
-        input = torch.randn(1, 3, 384, 224)
-        summary(self.model, input)
+        iut = torch.randn(1, 3, 384, 224)
+        #summary(self.model, iut)
 
         def suffix(epoch, niters):
             return "_e{:04d}_iter{:06d}".format(epoch, niters)
