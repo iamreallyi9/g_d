@@ -240,16 +240,13 @@ class DepthFineTuner:
 
         self.model.train()
 
-        # gj.add.visuall[4,2,3,384,224]
-        try:
-            print ("83")
-            summary(self.model, torch.randn((1,3,384,224)))
-        except:
-            print ("84")
-            summary(self.model, torch.randn(1,3,384,224))
 
 
+        print ("83")
 
+
+        input = torch.randn(1, 3, 384, 224)
+        summary(self.model, input)
 
         def suffix(epoch, niters):
             return "_e{:04d}_iter{:06d}".format(epoch, niters)
