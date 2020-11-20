@@ -239,7 +239,9 @@ class DepthFineTuner:
         os.makedirs(eval_dir, exist_ok=True)
 
         self.model.train()
-        #gj.add.visuall-have del
+
+        # gj.add.visuall
+        summary(self.model, torch.zeros(3, 224, 224))
 
 
         def suffix(epoch, niters):
