@@ -241,7 +241,7 @@ class DepthFineTuner:
         self.model.train()
 
         # gj.add.visuall
-        #summary(self.model, torch.zeros(3, 224, 224))
+        summary(self.model, torch.zeros(4,2,3,384,224))
 
 
         def suffix(epoch, niters):
