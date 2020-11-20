@@ -243,9 +243,10 @@ class DepthFineTuner:
         # gj.add.visuall[4,2,3,384,224]
         try:
             print ("83")
-            summary(self.model, torch.zeros(8,3,384,224))
+            summary(self.model, torch.randn((1,3,384,224)))
         except:
-            summary(self.model, torch.zeros(1,8, 3, 384, 224))
+            print ("84")
+            summary(self.model, torch.randn(1,3,384,224))
 
 
 
