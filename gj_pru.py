@@ -5,6 +5,7 @@ import torch
 from utils.torch_helpers import to_device
 import os
 from monodepth.depth_model_registry import get_depth_model
+from torchsummaryX import summary
 
 def get_dep():
     color_fmt = 'results/ayush/color_down/frame_{:06d}.raw'
@@ -16,7 +17,8 @@ def get_dep():
     print(nmodel)
 
     frames =[ i for i in range(92)]
-    print(color_fmt,frames)
+
+
     dataset = VideoFrameDataset(color_fmt, frames)
     data_loader = DataLoader(
         dataset, batch_size=1, shuffle=False, num_workers=4
@@ -35,7 +37,11 @@ def get_dep():
 
         depth = depth.detach().cpu().numpy().squeeze()
         inv_depth = 1.0 / depth
-        print(inv_depth)
+    print(inv_depth)
+    # print ("83")
+    iut = torch.randn(1,3,384,224)
+    summary(nmodel.model.netG, iut)
+    summary(nmodel,stacked_images)
 
 if __name__ == '__main__':
     get_dep()
