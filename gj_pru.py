@@ -84,7 +84,13 @@ def only_g():
         images = images.reshape(-1, C, H, W)
         # depth = nmodel.forward(stacked_images, metadata)
         # print(depth)
-        depth = new_model.forward(images)
+        prediction_d = new_model.forward(images)[0]  # 0is depth .1 is confidence
+
+        out_shape = shape[:-3] + prediction_d.shape[-2:]
+        prediction_d = prediction_d.reshape(out_shape)
+
+        prediction_d = torch.exp(prediction_d)
+        depth = prediction_d.squeeze(-3)
 
         depth = depth.detach().cpu().numpy().squeeze()
         inv_depth = 1.0 / depth
