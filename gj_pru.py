@@ -14,8 +14,7 @@ def get_dep():
     depth_dir = 'esults/ayush/depth_mc/depth'
 
     model = get_depth_model("mc")
-    nmodel = model()
-    print(nmodel)
+
     nmodel = mcm.MannequinChallengeModel()
     print(nmodel)
     # new_model = hourglass.HourglassModel(3)
@@ -37,6 +36,8 @@ def get_dep():
         stacked_images, metadata = data
         frame_id = metadata["frame_id"][0]
         depth = nmodel.forward(stacked_images, metadata)
+        print (metadata)
+        print ("onceeeee")
 
         depth = depth.detach().cpu().numpy().squeeze()
         inv_depth = 1.0 / depth
