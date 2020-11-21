@@ -170,8 +170,8 @@ class DepthFineTuner:
         color_fmt = pjoin(self.base_dir, "color_down", "frame_{:06d}.raw")
         depth_dir = pjoin(dir, "depth")
         depth_fmt = pjoin(depth_dir, "frame_{:06d}")
-        print ("here iknow thefmt=============")
-        print (color_fmt,depth_dir,depth_fmt)
+
+
         dataset = VideoFrameDataset(color_fmt, frames)
         data_loader = DataLoader(
             dataset, batch_size=1, shuffle=False, num_workers=4

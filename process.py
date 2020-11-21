@@ -60,10 +60,7 @@ class DatasetProcessor:
         if not self.video.check_frames(pjoin(initial_depth_dir, "depth"), "raw"):
             ft.save_depth(initial_depth_dir)
 
-        "force to check save-depth--gjjgjgjgj"
-        print ("force to check save-depth--gjjgjgjgj")
-        ft.save_depth(initial_depth_dir)
-
+        
 
         valid_frames = calibrate_scale(self.video, self.out_dir, frame_range, params)
         # frame range for finetuning:
