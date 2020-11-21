@@ -51,9 +51,7 @@ class DatasetProcessor:
             frame_range=params.frame_range.set, num_frames=self.video.frame_count,
         )
         frames = frame_range.frames()
-        "here iwant to know the frames"
-        print(frames)
-        print ("here iwant to know the frames")
+
 
         print_banner("Compute initial depth")
 

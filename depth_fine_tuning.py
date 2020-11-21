@@ -170,7 +170,7 @@ class DepthFineTuner:
         color_fmt = pjoin(self.base_dir, "color_down", "frame_{:06d}.raw")
         depth_dir = pjoin(dir, "depth")
         depth_fmt = pjoin(depth_dir, "frame_{:06d}")
-
+        print ("here iknow thefmt=============")
         print (color_fmt,depth_dir,depth_fmt)
         dataset = VideoFrameDataset(color_fmt, frames)
         data_loader = DataLoader(
@@ -245,9 +245,8 @@ class DepthFineTuner:
 
         print ("83")
 
-
         iut = torch.randn(1,3,384,224)
-        summary(self.model, iut)
+        summary(self.model.model.netG, iut)
 
 
         def suffix(epoch, niters):
