@@ -241,12 +241,9 @@ class DepthFineTuner:
 
         self.model.train()
 
-
-
-        print ("83")
-
-        iut = torch.randn(1,3,384,224)
-        summary(self.model.model.netG, iut)
+        #print ("83")
+        #iut = torch.randn(1,3,384,224)
+        #summary(self.model.model.netG, iut)"
 
 
         def suffix(epoch, niters):
