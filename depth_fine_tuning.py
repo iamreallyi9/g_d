@@ -171,6 +171,7 @@ class DepthFineTuner:
         depth_dir = pjoin(dir, "depth")
         depth_fmt = pjoin(depth_dir, "frame_{:06d}")
 
+        print (color_fmt,depth_dir,depth_fmt)
         dataset = VideoFrameDataset(color_fmt, frames)
         data_loader = DataLoader(
             dataset, batch_size=1, shuffle=False, num_workers=4
@@ -240,7 +241,11 @@ class DepthFineTuner:
 
         self.model.train()
 
-        print (self.model)
+
+
+        print ("83")
+
+
         iut = torch.randn(1,3,384,224)
         summary(self.model, iut)
 
