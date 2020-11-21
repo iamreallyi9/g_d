@@ -35,9 +35,10 @@ def get_dep():
         data = to_device(data)
         stacked_images, metadata = data
         frame_id = metadata["frame_id"][0]
-        depth = nmodel.forward(stacked_images, metadata)
-        print (metadata)
-        print ("onceeeee")
+
+        # depth = nmodel.forward(stacked_images, metadata)
+        # print(depth)
+        depth = nmodel.estimate_depth(stacked_images)
 
         depth = depth.detach().cpu().numpy().squeeze()
         inv_depth = 1.0 / depth
