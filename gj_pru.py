@@ -97,10 +97,7 @@ def only_g():
         inv_depth = 1.0 / depth
     print(inv_depth)
 
-    # 给定输入大小 (1, 1, 28, 28)
-    flops, params = count_flops_params(new_model, (1, 3, 384, 284))
-    # 将输出大小格式化为 M (例如, 10^6)
-    print(f'FLOPs: {flops/1e6:.3f}M,  Params: {params/1e6:.3f}M)
+
     configure_list =[{'sparsity':0.5,'op_types':['Conv2d']}]
     #configure_list = [{'op_types':['Conv2d']}]
 
@@ -108,28 +105,19 @@ def only_g():
     #pruner = AMCPruner(new_model,configure_list)
     p_model = pruner.compress()
 
-    flops, params = count_flops_params(p_model, (1, 3, 384, 284))
-    print(f'FLOPs: {flops / 1e6:.3f}M,  Params: {params / 1e6:.3f}M)
-
-    #m_path = 'pkl_model/my.pkl'
+    m_path = 'pkl_model/my_pr.pkl'
     #torch.save(new_model,m_path)
     # iut = torch.randn(1, 3, 384, 224)
     # summary(new_model, iut)
 
 def load():
-    m_path = 'pkl_model/my.pkl'
+    m_path = 'pkl_model/my_pr.pkl'
     a=torch.load(m_path)
     #print(a)
     iut = torch.randn(1, 3, 384, 224)
     summary(a, iut)
-    configure_list =[{'sparsity':0.7,'op_types':['BatchNorm2d'],}]
-
-    pruner =SlimPruner(a,configure_list)
-    new_model = pruner.compress()
-    iut = torch.randn(1, 3, 384, 224)
-    summary(new_model, iut)
 
 if __name__ == '__main__':
     #get_dep()
     only_g()
-    #load()
+    load()
