@@ -77,7 +77,7 @@ def only_g():
         stacked_images, metadata = data
         frame_id = metadata["frame_id"][0]
         images = autograd.Variable(stacked_images.cuda(), requires_grad=False)
-                                                                                                                                                                1,1           Top
+
         # Reshape ...CHW -> XCHW
         shape = images.shape
 
