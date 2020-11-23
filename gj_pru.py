@@ -96,7 +96,15 @@ def only_g():
         inv_depth = 1.0 / depth
     print(inv_depth)
 
+    m_path = 'pkl_model/my_pkl'
+    torch.save(new_model,m_path)
+
+def load():
+    m_path = 'pkl_model/my_pkl'
+    a=torch.load(m_path)
+    print(a)
 
 if __name__ == '__main__':
-    get_dep()
+    #get_dep()
     only_g()
+    load()
