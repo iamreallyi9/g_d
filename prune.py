@@ -15,7 +15,6 @@ import torch.nn.functional as F
 
 def pru_test():
 
-
     new_model = hourglass.HourglassModel(3)
     model_file = "checkpoints/test_mc.pth"
     model_parameters = torch.load(model_file)
@@ -34,7 +33,7 @@ def pru_test():
     print(list(module.named_parameters()))
     print(list(module.named_buffers()))
 
-    prune.random_unstructured(module，name = "weight", amount = 0.3)
+    prune.random_unstructured(module,name = "weight", amount = 0.3)
     #prune.ln_structured(module, name="weight", amount=0.5, n=2, dim=0)
     # parameters_to_prune = (
     #     (new_model.pred_layer, 'weight'),
@@ -45,8 +44,11 @@ def pru_test():
     #     pruning_method=prune.L1Unstructured,
     #     amount=0.2,
     # )
-    prune.remove(new_model, 'weight')
+    prune.remove(module, 'weight')
     print("==========")
+
+    print(list(module.named_parameters()))
+    print(list(module.named_buffers()))
     iut = torch.randn(1, 3, 384, 224)
     summary(new_model, iut)
 
