@@ -31,21 +31,20 @@ def pru_test():
     summary(new_model, iut)
     #self.seq//uncertainty_layer//pred_layer
     module = new_model.pred_layer
-    #print(list(module.named_parameters()))
-    #print(list(module.named_buffers()))
+    print(list(module.named_parameters()))
+    print(list(module.named_buffers()))
 
-    #prune.random_unstructured(module，name = "weight", amount = 0.3)
+    prune.random_unstructured(module，name = "weight", amount = 0.3)
     #prune.ln_structured(module, name="weight", amount=0.5, n=2, dim=0)
-    parameters_to_prune = (
-        (new_model.pred_layer, 'weight'),
-        (new_model.uncertainty_layer, 'weight'),
-        (new_model.seq, 'weight')
-    )
-    prune.global_unstructured(
-        parameters_to_prune,
-        pruning_method=prune.L1Unstructured,
-        amount=0.2,
-    )
+    # parameters_to_prune = (
+    #     (new_model.pred_layer, 'weight'),
+    #     (new_model.uncertainty_layer, 'weight')
+    # )
+    # prune.global_unstructured(
+    #     parameters_to_prune,
+    #     pruning_method=prune.L1Unstructured,
+    #     amount=0.2,
+    # )
     prune.remove(new_model, 'weight')
     print("==========")
     iut = torch.randn(1, 3, 384, 224)
