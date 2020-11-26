@@ -100,6 +100,7 @@ def compare():
     data_loader =load_data()
     #teacher——net
     net_t = load_t_net()
+
     #student——net
     net_s = small_model.AutoEncoder()
 
@@ -115,7 +116,8 @@ def compare():
 
     s_loss = ts_loss.SSIM()
     transf=transforms.ToTensor()
-
+    net_t.eval()
+    net_s.train()
     import time
     for epoch in range(3):
         time_start = time.time()
@@ -142,11 +144,13 @@ def compare():
             output_t = net_t(images)
 
             optimizer.zero_grad()
-
+            print("===============")
+            print(images.shape)
             output_s = net_s(images)
+            print(output_s.shape)
+            print("[[[[[[[[[[[[[[[[[[[[[")
 
             loss1 = criterion(output_s, labels)
-
             loss2 = s_loss.forward(output_s,output_t)
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
