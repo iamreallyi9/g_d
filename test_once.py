@@ -17,6 +17,7 @@ import small_model
 from PIL import Image
 import numpy as np
 
+
 def load_data():
     color_fmt = 'results/ayush/color_down/frame_{:06d}.raw'
     frames = [i for i in range(92)]
@@ -37,7 +38,7 @@ def load_t_net():
 def id2image(id):
     id =id.numpy()
     path = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/depth/frame_{:06d}.png".format(id)
-    image= np.array(Image.open(path))
+    image= np.array(Image.open(path))/255
     return image
 
 def test():
@@ -66,7 +67,7 @@ def test_model():
 
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
-    new_model.eval()
+    new_model.eva
 
     # os.makedirs(depth_dir, exist_ok=True)
     for data in data_loader:
@@ -121,8 +122,10 @@ def compare():
 
         for i, data in enumerate( data_loader):
             inputs, labels = data
+
             labels = id2image(labels['frame_id'])
-            images = autograd.Variable(inputs.cuda(), requires_grad=False)
+            labels = autograd.Variable(labels.cuda(), requires_grad=True)
+            images = autograd.Variable(inputs.cuda(), requires_grad=True)
             # Reshape ...CHW -> XCHW
             shape = images.shape
 
