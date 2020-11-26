@@ -1,4 +1,3 @@
-import cv2
 
 import torch
 from torch.utils.data import DataLoader
@@ -23,7 +22,7 @@ def test_model():
     )
 
     new_model = hourglass.HourglassModel(3)
-    model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/0020.pth"
+    model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
     model_parameters = torch.load(model_file)
     new_model.load_state_dict(model_parameters)
     new_model = torch.nn.DataParallel(new_model)
