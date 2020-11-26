@@ -146,15 +146,11 @@ def compare():
             images = images.to(device)
             labels = labels.to(device)
 
-            output_t = net_t(images)[0]
-            output_t = transf(output_t).to(device)
+            output_t = net_t(images)[0].to(device)
 
             optimizer.zero_grad()
-            print("===============")
-            print(images.shape)
-            output_s = net_s(images)
-            print(output_s.shape)
-            print("[[[[[[[[[[[[[[[[[[[[[")
+
+            output_s = net_s(images).to(device)
 
             loss1 = criterion(output_s, labels)
             loss2 = s_loss.forward(output_s,output_t)
