@@ -124,7 +124,7 @@ def compare():
     net_t.eval()
     net_s.train()
     import time
-    for epoch in range(3):
+    for epoch in range(2):
         time_start = time.time()
         running_loss = 0.
         batch_size = 1
@@ -146,33 +146,28 @@ def compare():
             images = images.to(device)
             labels = labels.to(device)
 
-            output_t = net_t(images)[0].to(device)
-
             optimizer.zero_grad()
 
+            output_t = net_t(images)[0].to(device)
             output_s = net_s(images).to(device)
 
             loss1 = criterion(output_s, labels)
-
-
             loss2 = 1 - s_loss.forward(output_s,output_t)
-            print(loss1,loss2)
-            print(loss1.type(),type(loss2))
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
-
             loss.backward()
             optimizer.step()
 
             print('[%d, %5d] loss: %.4f loss1: %.4f loss2: %.4f' % (
             epoch + 1, (i + 1) * batch_size, loss.item(), loss1.item(), loss2.item()))
 
-        torch.save(net_s, '/gj_TS/student.pkl')
+        torch.save(net_s, 'gj_TS/student.pkl')
         time_end = time.time()
         print('Time cost:', time_end - time_start, "s")
 
     print('Finished Training')
 
 if __name__ == '__main__':
+    torch.set_default_tensor_type(torch.FloatTensor)
     compare()
     #test()
