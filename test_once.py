@@ -104,18 +104,18 @@ def compare():
     #student——net
     net_s = small_model.AutoEncoder()
     net_s = nn.DataParallel(net_s)
-
-    criterion = nn.MSELoss(reduction='mean')
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    criterion = nn.MSELoss(reduction='mean').to(device)
     criterion2 = nn.KLDivLoss()
 
     optimizer = optim.Adam(net_s.parameters(), lr=0.001)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     print(device)
     net_s.to(device)
     net_t.to(device)
 
-    s_loss = ts_loss.SSIM()
+    s_loss = ts_loss.SSIM().to(device)
     transf=transforms.ToTensor()
     net_t.eval()
     net_s.train()
@@ -153,8 +153,8 @@ def compare():
             print(output_s.shape)
             print("[[[[[[[[[[[[[[[[[[[[[")
 
-            loss1 = criterion(output_s, labels).to(device)
-            loss2 = s_loss.forward(output_s,output_t).to(device)
+            loss1 = criterion(output_s, labels)
+            loss2 = s_loss.forward(output_s,output_t)
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
 
