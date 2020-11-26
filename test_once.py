@@ -7,6 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 import optimizer
 from loaders.video_dataset import VideoDataset, VideoFrameDataset
+import torchvision.transforms as transforms
 from monodepth import mannequin_challenge_model as mcm
 from utils.torch_helpers import to_device
 from torchsummaryX import summary
@@ -36,7 +37,7 @@ def load_t_net():
     return new_model
 
 def id2image(id):
-    id =id.numpy()
+    id =id.item()
     path = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/depth/frame_{:06d}.png".format(id)
     image= np.array(Image.open(path))/255
     return image
@@ -111,7 +112,10 @@ def compare():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net_s.to(device)
     net_t.to(device)
+
     s_loss = ts_loss.SSIM()
+    transf=transforms.ToTensor()
+
     import time
     for epoch in range(3):
         time_start = time.time()
@@ -124,8 +128,10 @@ def compare():
             inputs, labels = data
 
             labels = id2image(labels['frame_id'])
-            labels = autograd.Variable(labels.cuda(), requires_grad=True)
-            images = autograd.Variable(inputs.cuda(), requires_grad=True)
+            labels=transf(labels)
+            labels.to(device)
+            images = autograd.Variable(inputs.cuda(), requires_grad=False)
+            
             # Reshape ...CHW -> XCHW
             shape = images.shape
 
