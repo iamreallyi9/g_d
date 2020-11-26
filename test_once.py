@@ -45,10 +45,14 @@ def id2image(id):
 def test():
 
     net = small_model.AutoEncoder()
+    tnet = load_t_net()
     x = torch.randn(1,3,384,224)
-    y = net(x)
-    summary(net,x)
-    print(y.size())
+    y = tnet(x)
+    print(y.size(),y.type())
+    print("djdjdjdhdhdhdfhddhdhdhdhdh")
+    print(y)
+    #summary(tnet,x)
+
 
 def test_model():
     color_fmt = 'results/ayush/color_down/frame_{:06d}.raw'
@@ -143,6 +147,8 @@ def compare():
             labels = labels.to(device)
 
             output_t = net_t(images)
+            output_t = transf(output_t).to(device)
+
 
             optimizer.zero_grad()
             print("===============")
