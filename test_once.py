@@ -129,20 +129,18 @@ def compare():
 
         for i, data in enumerate( data_loader):
             images, labels = data
-
             labels = id2image(labels['frame_id'])
             labels=transf(labels)
-            labels.to(device)
 
             #images = autograd.Variable(inputs.cuda(), requires_grad=False)
-
             # Reshape ...CHW -> XCHW
             shape = images.shape
 
             C, H, W = shape[-3:]
             images = images.reshape(-1, C, H, W)
 
-            images.to(device)
+            images = images.to(device)
+            labels = labels.to(device)
 
             output_t = net_t(images)
 
