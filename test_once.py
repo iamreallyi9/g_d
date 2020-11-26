@@ -146,9 +146,8 @@ def compare():
             images = images.to(device)
             labels = labels.to(device)
 
-            output_t = net_t(images)
+            output_t = net_t(images)[0]
             output_t = transf(output_t).to(device)
-
 
             optimizer.zero_grad()
             print("===============")
