@@ -153,8 +153,8 @@ def compare():
             print(output_s.shape)
             print("[[[[[[[[[[[[[[[[[[[[[")
 
-            loss1 = criterion(output_s, labels)
-            loss2 = s_loss.forward(output_s,output_t)
+            loss1 = criterion(output_s, labels).to(device)
+            loss2 = s_loss.forward(output_s,output_t).to(device)
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
 
