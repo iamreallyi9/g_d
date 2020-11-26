@@ -20,13 +20,14 @@ def test_model():
     data_loader = DataLoader(
         dataset, batch_size=1, shuffle=False, num_workers=4
     )
-    new_model = mcm.MannequinChallengeModel()
-    #new_model = hourglass.HourglassModel(3)
+    #new_model = mcm.MannequinChallengeModel()
+    new_model = hourglass.HourglassModel(3)
+    new_model = torch.nn.DataParallel(new_model)
 
     model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
     model_parameters = torch.load(model_file)
     new_model.load_state_dict(model_parameters)
-    new_model = torch.nn.DataParallel(new_model)
+
 
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
