@@ -6,7 +6,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import optimizer
 from loaders.video_dataset import VideoDataset, VideoFrameDataset
-
+from monodepth import mannequin_challenge_model as mcm
 from utils.torch_helpers import to_device
 from torchsummaryX import summary
 import torch.autograd as autograd
@@ -20,8 +20,9 @@ def test_model():
     data_loader = DataLoader(
         dataset, batch_size=1, shuffle=False, num_workers=4
     )
+    new_model = mcm.MannequinChallengeModel()
+    #new_model = hourglass.HourglassModel(3)
 
-    new_model = hourglass.HourglassModel(3)
     model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
     model_parameters = torch.load(model_file)
     new_model.load_state_dict(model_parameters)
