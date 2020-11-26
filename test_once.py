@@ -12,7 +12,7 @@ from utils.torch_helpers import to_device
 from torchsummaryX import summary
 import torch.autograd as autograd
 import numpy as np
-from small_model import CNN
+import ts_loss
 import small_model
 def load_data():
     color_fmt = 'results/ayush/color_down/frame_{:06d}.raw'
@@ -90,18 +90,20 @@ def compare():
     #teacher——net
     net_t = load_t_net()
     #student——net
-    net_s = CNN()
+    net_s = small_model.AutoEncoder()
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss(reduction='mean')
     criterion2 = nn.KLDivLoss()
+
+
     optimizer = optim.Adam(net_s.parameters(), lr=0.001)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net_s.to(device)
     net_t.to(device)
-
+    s_loss = ts_loss.SSIM()
     import time
-    for epoch in range(100):
+    for epoch in range(3):
         time_start = time.time()
         running_loss = 0.
         batch_size = 4
@@ -117,19 +119,15 @@ def compare():
             C, H, W = shape[-3:]
             images = images.reshape(-1, C, H, W)
 
-            soft_target = net_t(images)
+            output_t = net_t(images)
 
             optimizer.zero_grad()
 
-            outputs = net_s(images)
+            output_s = net_s(images)
 
-            loss1 = criterion(outputs, labels)
+            loss1 = criterion(output_s, labels)
 
-            T = 2
-            outputs_S = F.log_softmax(outputs / T, dim=1)
-            outputs_T = F.softmax(soft_target / T, dim=1)
-
-            loss2 = criterion2(outputs_S, outputs_T) * T * T
+            loss2 = s_loss.forward(output_s,output_t)
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
 
@@ -146,5 +144,5 @@ def compare():
     print('Finished Training')
 
 if __name__ == '__main__':
-    #test_model()
-    test()
+    compare()
+    #test()

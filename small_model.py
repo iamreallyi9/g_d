@@ -270,7 +270,7 @@ class AutoEncoder(torch.nn.Module):
     def __init__(self):
         super(AutoEncoder, self).__init__()
         self.encoder = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1),
+            torch.nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             torch.nn.ReLU(),
             torch.nn.MaxPool2d(kernel_size=2, stride=2),
             torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
