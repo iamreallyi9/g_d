@@ -244,7 +244,7 @@ class MobileNetV2(nn.Module):
         self.conv2 = nn.Conv2d(320, 1280, kernel_size=1, stride=1,
                                padding=0, bias=False)
         self.bn2 = nn.BatchNorm2d(1280)
-        self.linear = nn.Linear(1280, num_classes)
+
 
     def _make_layers(self, in_planes):
         layers = []
@@ -262,9 +262,30 @@ class MobileNetV2(nn.Module):
         out = F.relu(self.bn2(self.conv2(out)))
         # NOTE: change pooling kernel_size 7 -> 4 for CIFAR10
         out = F.avg_pool2d(out, 4)
-        out = out.view(out.size(0), -1)
-        out = self.linear(out)
+
         return out
 
+
+class AutoEncoder(torch.nn.Module):
+    def __init__(self):
+        super(AutoEncoder, self).__init__()
+        self.encoder = torch.nn.Sequential(
+            torch.nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1),
+            torch.nn.ReLU(),
+            torch.nn.MaxPool2d(kernel_size=2, stride=2),
+            torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            torch.nn.ReLU(),
+            torch.nn.MaxPool2d(kernel_size=2, stride=2))
+        self.decoder = torch.nn.Sequential(
+            torch.nn.Upsample(scale_factor=2, mode="nearest"),
+            torch.nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1),
+            torch.nn.ReLU(),
+            torch.nn.Upsample(scale_factor=2, mode="nearest"),
+            torch.nn.Conv2d(64, 1, kernel_size=3, stride=1, padding=1))
+
+    def forward(self, input):
+        output = self.encoder(input)
+        output = self.decoder(output)
+        return output
 
 

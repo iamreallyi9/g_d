@@ -33,8 +33,8 @@ def load_t_net():
 
 def test():
 
-    net = small_model.MobileNetV2()
-    x = torch.randn(2,3,32,32)
+    net = small_model.AutoEncoder()
+    x = torch.randn(1,3,384,224)
     y = net(x)
     summary(net,x)
     print(y.size())
