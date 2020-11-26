@@ -103,14 +103,15 @@ def compare():
 
     #student——net
     net_s = small_model.AutoEncoder()
+    net_s = nn.DataParallel(net_s)
 
     criterion = nn.MSELoss(reduction='mean')
     criterion2 = nn.KLDivLoss()
 
-
     optimizer = optim.Adam(net_s.parameters(), lr=0.001)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
     net_s.to(device)
     net_t.to(device)
 
@@ -122,7 +123,7 @@ def compare():
     for epoch in range(3):
         time_start = time.time()
         running_loss = 0.
-        batch_size = 4
+        batch_size = 1
 
         alpha = 0.95
 
@@ -132,7 +133,7 @@ def compare():
             labels = id2image(labels['frame_id'])
             labels=transf(labels)
             labels.to(device)
-            images.to(device)
+
             #images = autograd.Variable(inputs.cuda(), requires_grad=False)
 
             # Reshape ...CHW -> XCHW
@@ -140,6 +141,8 @@ def compare():
 
             C, H, W = shape[-3:]
             images = images.reshape(-1, C, H, W)
+
+            images.to(device)
 
             output_t = net_t(images)
 
