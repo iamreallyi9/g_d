@@ -125,13 +125,14 @@ def compare():
         alpha = 0.95
 
         for i, data in enumerate( data_loader):
-            inputs, labels = data
+            images, labels = data
 
             labels = id2image(labels['frame_id'])
             labels=transf(labels)
             labels.to(device)
-            images = autograd.Variable(inputs.cuda(), requires_grad=False)
-            
+            images.to(device)
+            #images = autograd.Variable(inputs.cuda(), requires_grad=False)
+
             # Reshape ...CHW -> XCHW
             shape = images.shape
 
