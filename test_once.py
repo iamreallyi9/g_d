@@ -153,9 +153,11 @@ def compare():
             output_s = net_s(images).to(device)
 
             loss1 = criterion(output_s, labels)
-            print(output_t.type(),output_s.type())
-            print(loss2.type())
-            loss2 = s_loss.forward(output_s,output_t)
+
+
+            loss2 = 1 - s_loss.forward(output_s,output_t)
+            print(loss1,loss2)
+            print(loss1.type(),type(loss2))
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
 
