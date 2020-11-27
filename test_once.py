@@ -113,8 +113,8 @@ def compare():
             C, H, W = shape[-3:]
             images = images.reshape(-1, C, H, W)
 
-            images = images.to(device)
-            labels = labels.to(device)
+            images = images.to(device).double()
+            labels = labels.to(device).double()
 
             optimizer.zero_grad()
 
