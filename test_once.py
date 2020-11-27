@@ -17,7 +17,7 @@ import ts_loss
 import small_model
 from PIL import Image
 import numpy as np
-
+T_mid_feature=[]
 
 def load_data():
     color_fmt = 'results/ayush/color_down/frame_{:06d}.raw'
@@ -54,7 +54,9 @@ def test():
     #summary(tnet,x)
 
 def hook(module, inputdata, output):
+    T_mid_feature.add(output.data)
     print(output.data.shape)
+
 def test_model():
     #net = load_t_net()
     net = HourglassModel(3)
@@ -65,8 +67,7 @@ def test_model():
     hh = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
     y =net(x)
     hh.remove()
-
-
+    print(T_mid_feature)
 
 def compare():
     # 数据集
