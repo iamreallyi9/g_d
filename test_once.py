@@ -36,14 +36,16 @@ def load_t_net():
     new_model.load_state_dict(model_parameters)
     return new_model
 
-def id2image(id):
+def id2image(id,trans):
     id = id.numpy()
-    labels = np.array([])
+    labels = []
     for i in id:
         path = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/depth/frame_{:06d}.png".format(i)
         image = np.array(Image.open(path)) / 255
-        np.append(labels,image)
-        
+        image = trans(image)
+        labels.append(image)
+    labels = np.array(labels)
+    labels =torch.from_numpy(labels)
     #id =id.item()
     return labels
 
@@ -121,8 +123,8 @@ def compare():
 
         for i, data in enumerate( data_loader):
             images, labels = data
-            labels = id2image(labels['frame_id'])
-            labels=transf(labels)
+            labels = id2image(labels['frame_id'],transf)
+
 
             #images = autograd.Variable(inputs.cuda(), requires_grad=False)
             # Reshape ...CHW -> XCHW
