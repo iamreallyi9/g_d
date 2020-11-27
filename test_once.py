@@ -38,11 +38,12 @@ def load_t_net():
 
 def id2image(id):
     id = id.numpy()
-    labels = []
+    labels = np.array([])
     for i in id:
         path = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/depth/frame_{:06d}.png".format(i)
         image = np.array(Image.open(path)) / 255
-        labels.append(image)
+        np.append(labels,image)
+        
     #id =id.item()
     return labels
 
