@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 from torch.utils.data import DataLoader
-from monodepth.mannequin_challenge.models import hourglass
+from gj_hourglass import HourglassModel
 from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 import optimizer
@@ -29,7 +29,7 @@ def load_data():
     return data_loader
 
 def load_t_net():
-    new_model = hourglass.HourglassModel(3)
+    new_model = HourglassModel(3)
     new_model = torch.nn.DataParallel(new_model)
     model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
     model_parameters = torch.load(model_file)
@@ -53,51 +53,12 @@ def test():
     print(y)
     #summary(tnet,x)
 
-
+def hook(module, inputdata, output):
+    print(output.data.shape)
 def test_model():
-    color_fmt = 'results/ayush/color_down/frame_{:06d}.raw'
-    frames = [i for i in range(92)]
-    dataset = VideoFrameDataset(color_fmt, frames)
-    data_loader = DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=4
-    )
-    #new_model = mcm.MannequinChallengeModel()
-    new_model = hourglass.HourglassModel(3)
-    new_model = torch.nn.DataParallel(new_model)
-
-    model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
-    model_parameters = torch.load(model_file)
-    new_model.load_state_dict(model_parameters)
-
-
-    torch.backends.cudnn.enabled = True
-    torch.backends.cudnn.benchmark = True
-    new_model.eva
-
-    # os.makedirs(depth_dir, exist_ok=True)
-    for data in data_loader:
-        data = to_device(data)
-        stacked_images, metadata = data
-        frame_id = metadata["frame_id"][0]
-        images = autograd.Variable(stacked_images.cuda(), requires_grad=False)
-        # Reshape ...CHW -> XCHW
-        shape = images.shape
-
-        C, H, W = shape[-3:]
-        images = images.reshape(-1, C, H, W)
-        # depth = nmodel.forward(stacked_images, metadata)
-        # print(depth)
-        prediction_d = new_model.forward(images)[0]  # 0is depth .1 is confidence
-
-        out_shape = shape[:-3] + prediction_d.shape[-2:]
-        prediction_d = prediction_d.reshape(out_shape)
-
-        prediction_d = torch.exp(prediction_d)
-        depth = prediction_d.squeeze(-3)
-
-        depth = depth.detach().cpu().numpy().squeeze()
-        inv_depth = 1.0 / depth
-    print(inv_depth,np.shape(inv_depth))
+    net = load_t_net()
+    for param in net.named_parameters():
+        print(param)
 
 def compare():
     # 数据集
@@ -129,7 +90,7 @@ def compare():
         running_loss = 0.
         batch_size = 1
 
-        alpha = 0.95
+        alpha = 1
 
         for i, data in enumerate( data_loader):
             images, labels = data
@@ -168,6 +129,7 @@ def compare():
     print('Finished Training')
 
 if __name__ == '__main__':
-    torch.set_default_tensor_type(torch.FloatTensor)
-    compare()
+    torch.set_default_tensor_type(torch.DoubleTensor)
+    #compare()
+    test_model()
     #test()
