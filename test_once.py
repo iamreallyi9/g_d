@@ -128,11 +128,11 @@ def compare():
         running_loss = 0.
         batch_size = 2
 
-        alpha = 0.3
+        alpha = 0.7
 
         for i, data in enumerate( data_loader):
             images, labels = data
-            labels = id2image(labels['frame_id'],transf)
+            #labels = id2image(labels['frame_id'],transf)
 
 
             #images = autograd.Variable(inputs.cuda(), requires_grad=False)
@@ -157,9 +157,10 @@ def compare():
 
             #注销hook
             hh.remove()
-
-            loss1 = criterion(output_s_features, T_mid_feature[0])
-            loss2 = 1 - s_loss.forward(output_s_depth,output_t)
+            loss1 = 1 - s_loss.forward(output_s_features, T_mid_feature[0])
+            loss2 = criterion(output_s_depth,output_t)
+            #loss1 = criterion(output_s_features, T_mid_feature[0])
+            #loss2 = 1 - s_loss.forward(output_s_depth,output_t)
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
             loss.backward()
@@ -176,6 +177,6 @@ def compare():
 
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
-    make_my_model()
+    #make_my_model()
     compare()
 
