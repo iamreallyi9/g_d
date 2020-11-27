@@ -132,7 +132,7 @@ def compare():
 
         for i, data in enumerate( data_loader):
             images, labels = data
-            #labels = id2image(labels['frame_id'],transf)
+            labels = id2image(labels['frame_id'],transf)
 
 
             #images = autograd.Variable(inputs.cuda(), requires_grad=False)
@@ -176,6 +176,6 @@ def compare():
 
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
-
+    make_my_model()
     compare()
 
