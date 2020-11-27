@@ -54,7 +54,7 @@ def test():
     #summary(tnet,x)
 
 def hook(module, inputdata, output):
-    T_mid_feature.add(output.data)
+    T_mid_feature.append(output.data.shape)
     print(output.data.shape)
 
 def test_model():
@@ -94,7 +94,7 @@ def compare():
     net_t.eval()
     net_s.train()
     import time
-    for epoch in range(2):
+    for epoch in range(1):
         time_start = time.time()
         running_loss = 0.
         batch_size = 1
@@ -118,8 +118,14 @@ def compare():
 
             optimizer.zero_grad()
 
+            #注册一个hook
+            hh = net_t.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
+
             output_t = net_t(images)[0].to(device)
             output_s = net_s(images).to(device)
+
+            #注销hook
+            hh.remove()
 
             loss1 = criterion(output_s, labels)
             loss2 = 1 - s_loss.forward(output_s,output_t)
@@ -131,6 +137,8 @@ def compare():
             print('[%d, %5d] loss: %.4f loss1: %.4f loss2: %.4f' % (
             epoch + 1, (i + 1) * batch_size, loss.item(), loss1.item(), loss2.item()))
 
+        print(T_mid_feature)
+
         torch.save(net_s, 'gj_TS/student.pkl')
         time_end = time.time()
         print('Time cost:', time_end - time_start, "s")
@@ -139,6 +147,6 @@ def compare():
 
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
-    #compare()
-    test_model()
+    compare()
+    #test_model()
     #test()
