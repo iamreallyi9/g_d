@@ -60,9 +60,9 @@ def test_model():
     for param in net.named_parameters():
         #print(param[0])
         pass
-    hh = net.seq[3]
+    hh = net.module.seq[3]
     print(hh)
-    handle = net.seq[3].list[0][3].list[0][4].convs
+    handle = net.moudle.seq[3].list[0][3].list[0][4].convs
     print(handle)
 
 
