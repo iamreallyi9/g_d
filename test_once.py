@@ -64,10 +64,12 @@ def test_model():
     #net = HourglassModel(3)
     x = torch.randn(1,3,384,224)
     for param in net.named_parameters():
-        #print(param[0])
-        pass
+        print(param[0])
+        
     hh = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
     y =net(x)
+    print("===========")
+    summary(net.module,x)
     hh.remove()
 
 
@@ -156,6 +158,6 @@ def compare():
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
     #make_my_model()
-    compare()
-    #test_model()
+    #compare()
+    test_model()
     #test()
