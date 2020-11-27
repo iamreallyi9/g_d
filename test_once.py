@@ -24,7 +24,7 @@ def load_data():
     frames = [i for i in range(92)]
     dataset = VideoFrameDataset(color_fmt, frames)
     data_loader = DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=4
+        dataset, batch_size=4, shuffle=False, num_workers=4
     )
     return data_loader
 
@@ -37,10 +37,14 @@ def load_t_net():
     return new_model
 
 def id2image(id):
-    id =id.item()
-    path = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/depth/frame_{:06d}.png".format(id)
-    image= np.array(Image.open(path))/255
-    return image
+    id = id.numpy()
+    labels = []
+    for i in id:
+        path = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/depth/frame_{:06d}.png".format(i)
+        image = np.array(Image.open(path)) / 255
+        labels.append(image)
+    #id =id.item()
+    return labels
 
 def test():
 
@@ -74,8 +78,6 @@ def test_model():
     print("=++++++++++++++++++++=")
     summary(net.module,x)
     hh0.remove()
-
-
 
 
 def make_my_model():
@@ -112,9 +114,9 @@ def compare():
     for epoch in range(1):
         time_start = time.time()
         running_loss = 0.
-        batch_size = 1
+        batch_size = 4
 
-        alpha = 0.5
+        alpha = 0.3
 
         for i, data in enumerate( data_loader):
             images, labels = data
