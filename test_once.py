@@ -36,6 +36,14 @@ def load_t_net():
     new_model.load_state_dict(model_parameters)
     return new_model
 
+def load_s_net():
+    new_model = small_model.gNet()
+    new_model = torch.nn.DataParallel(new_model)
+    model_file = "gj_TS/student.pth"
+    model_parameters = torch.load(model_file)
+    new_model.load_state_dict(model_parameters)
+    return new_model
+
 def id2image(id,trans):
     id = id.numpy()
     labels = []
@@ -160,7 +168,7 @@ def compare():
             print('[%d, %5d] loss: %.4f loss1: %.4f loss2: %.4f' % (
             epoch + 1, (i + 1) * batch_size, loss.item(), loss1.item(), loss2.item()))
 
-        torch.save(net_s, 'gj_TS/student.pkl')
+        torch.save(net_s, 'gj_TS/student.pth')
         time_end = time.time()
         print('Time cost:', time_end - time_start, "s")
 
@@ -168,7 +176,6 @@ def compare():
 
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
-    #make_my_model()
+
     compare()
-    #test_model()
-    #test()
+
