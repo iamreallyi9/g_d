@@ -54,8 +54,9 @@ def test():
     #summary(tnet,x)
 
 def hook(module, inputdata, output):
-    T_mid_feature.append(output.data.shape)
-    print(output.data.shape)
+    T_mid_feature = []
+    T_mid_feature.append(output.data)
+
 
 def test_model():
     net = load_t_net()
@@ -81,7 +82,7 @@ def compare():
     net_t = load_t_net()
 
     #student——net
-    net_s = small_model.AutoEncoder()
+    net_s = small_model.gNet()
     net_s = nn.DataParallel(net_s)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     criterion = nn.MSELoss(reduction='mean').to(device)
@@ -104,7 +105,7 @@ def compare():
         running_loss = 0.
         batch_size = 1
 
-        alpha = 1
+        alpha = 0.5
 
         for i, data in enumerate( data_loader):
             images, labels = data
@@ -127,13 +128,13 @@ def compare():
             hh = net_t.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
 
             output_t = net_t(images)[0].to(device)
-            output_s = net_s(images).to(device)
+            output_s_depth,output_s_features= net_s(images).to(device)
 
             #注销hook
             hh.remove()
 
-            loss1 = criterion(output_s, labels)
-            loss2 = 1 - s_loss.forward(output_s,output_t)
+            loss1 = criterion(output_s_features, T_mid_feature[0])
+            loss2 = 1 - s_loss.forward(output_s_depth,output_t)
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
             loss.backward()
@@ -150,7 +151,7 @@ def compare():
 
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
-    make_my_model()
-    #compare()
+    #make_my_model()
+    compare()
     #test_model()
     #test()
