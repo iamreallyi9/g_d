@@ -25,7 +25,10 @@ class gNet(nn.Module):
             torch.nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
             torch.nn.ReLU(),
             torch.nn.Upsample(scale_factor=2, mode="nearest"),
-            torch.nn.Conv2d(32, 1, kernel_size=3, stride=1, padding=1))
+            torch.nn.Conv2d(32, 1, kernel_size=3, stride=1, padding=1),
+            torch.nn.ReLU(),
+            torch.nn.Upsample(scale_factor=2, mode="nearest"),
+            torch.nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1))
 
 
     def forward(self, x):
