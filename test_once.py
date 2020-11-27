@@ -58,8 +58,8 @@ def hook(module, inputdata, output):
     print(output.data.shape)
 
 def test_model():
-    #net = load_t_net()
-    net = HourglassModel(3)
+    net = load_t_net()
+    #net = HourglassModel(3)
     x = torch.randn(1,3,384,224)
     for param in net.named_parameters():
         #print(param[0])
