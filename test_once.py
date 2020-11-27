@@ -69,16 +69,12 @@ def test_model():
         print(param[0])
 
     hh0 = net.module.seq[3].list[0][3].list[0][3].list[1][2].register_forward_hook(hook)
-    hh1 = net.module.seq[3].list[0][3].list[0][3].list[1][1].register_forward_hook(hook)
-    hh2 = net.module.seq[3].list[0][3].list[0][3].list[1][3].register_forward_hook(hook)
-    hh3 = net.module.seq[3].list[0][3].list[0][3].list[1][4].register_forward_hook(hook)
+
     y =net(x)
     print("=++++++++++++++++++++=")
     summary(net.module,x)
     hh0.remove()
-    hh1.remove()
-    hh2.remove()
-    hh3.remove()
+
 
 
 
@@ -167,6 +163,6 @@ def compare():
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
     #make_my_model()
-    #compare()
-    test_model()
+    compare()
+    #test_model()
     #test()

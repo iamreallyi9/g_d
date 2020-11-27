@@ -14,30 +14,29 @@ class gNet(nn.Module):
                (6, 96, 3, 1),
                (6, 160, 3, 2),
                (6, 320, 1, 1)]
+
         self.layer1 = Block(3,6,1,1)
-        self.layer2 = Block(6,12,2,1)
-        self.layer3 = Block(12,12,3,2)
-        self.layer4 = Block(12,24,4,2)
-        self.layer5 = Block(24,36,3,1)
-        self.layer6 = Block(36,64,3,2)
+        self.layer2 = Block(6,12,2,2)
+        self.layer3 = Block(12,24,4,2)
+        self.layer4 = Block(24,36,3,1)
+        self.layer5 = Block(64,256,3,2)
         self.decoder = torch.nn.Sequential(
             torch.nn.Upsample(scale_factor=2, mode="nearest"),
-            torch.nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
+            torch.nn.Conv2d(256, 64, kernel_size=3, stride=1, padding=1),
             torch.nn.ReLU(),
             torch.nn.Upsample(scale_factor=2, mode="nearest"),
-            torch.nn.Conv2d(32, 1, kernel_size=3, stride=1, padding=1),
+            torch.nn.Conv2d(64, 16, kernel_size=3, stride=1, padding=1),
             torch.nn.ReLU(),
             torch.nn.Upsample(scale_factor=2, mode="nearest"),
             torch.nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1))
 
-
     def forward(self, x):
         features = self.layer1(x)
-        features =self.layer2(features)
+        features = self.layer2(features)
         features = self.layer3(features)
         features = self.layer4(features)
         features = self.layer5(features)
-        features = self.layer6(features)
+
         depth =self.decoder(features)
         return depth,features
 
