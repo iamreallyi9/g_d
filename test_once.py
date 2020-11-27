@@ -56,14 +56,16 @@ def test():
 def hook(module, inputdata, output):
     print(output.data.shape)
 def test_model():
-    net = load_t_net()
+    #net = load_t_net()
+    net = HourglassModel(3)
+    x = torch.randn(1,3,384,224)
     for param in net.named_parameters():
         #print(param[0])
         pass
-    hh = net.module.seq[3]
-    print(hh)
-    handle = net.moudle.seq[3].list[0][3].list[0][4].convs
-    print(handle)
+    hh = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
+    y =net(x)
+    hh.remove()
+
 
 
 def compare():
