@@ -69,6 +69,11 @@ def test_model():
     hh.remove()
     print(T_mid_feature)
 
+def make_my_model():
+    net = small_model.gNet()
+    x = torch.randn(1, 3, 384, 224)
+    summary(net,x)
+
 def compare():
     # 数据集
     data_loader =load_data()
@@ -137,8 +142,6 @@ def compare():
             print('[%d, %5d] loss: %.4f loss1: %.4f loss2: %.4f' % (
             epoch + 1, (i + 1) * batch_size, loss.item(), loss1.item(), loss2.item()))
 
-        print(T_mid_feature)
-
         torch.save(net_s, 'gj_TS/student.pkl')
         time_end = time.time()
         print('Time cost:', time_end - time_start, "s")
@@ -147,6 +150,7 @@ def compare():
 
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
-    compare()
+    make_my_model()
+    #compare()
     #test_model()
     #test()
