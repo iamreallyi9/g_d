@@ -128,7 +128,9 @@ def compare():
             hh = net_t.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
 
             output_t = net_t(images)[0].to(device)
-            output_s_depth,output_s_features= net_s(images).to(device)
+            output_s_depth,output_s_features= net_s(images)
+            output_s_features = output_s_features.to(device)
+            output_s_depth = output_s_depth.to(device)
 
             #注销hook
             hh.remove()
