@@ -24,7 +24,7 @@ def load_data():
     frames = [i for i in range(92)]
     dataset = VideoFrameDataset(color_fmt, frames)
     data_loader = DataLoader(
-        dataset, batch_size=4, shuffle=False, num_workers=4
+        dataset, batch_size=2, shuffle=False, num_workers=4
     )
     return data_loader
 
@@ -44,8 +44,8 @@ def id2image(id,trans):
         image = np.array(Image.open(path)) / 255
         image = trans(image)
         labels.append(image)
-    labels = np.array(labels)
-    labels =torch.from_numpy(labels)
+    labels = torch.cat(labels,dim=0)
+    print(labels.shape)
     #id =id.item()
     return labels
 
@@ -64,7 +64,7 @@ def hook(module, inputdata, output):
     global T_mid_feature
     T_mid_feature = []
     T_mid_feature.append(output.data)
-    print(output.data.shape)
+    #print(output.data.shape)
 
 
 def test_model():
@@ -117,7 +117,7 @@ def compare():
     for epoch in range(1):
         time_start = time.time()
         running_loss = 0.
-        batch_size = 4
+        batch_size = 2
 
         alpha = 0.3
 
