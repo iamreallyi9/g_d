@@ -38,8 +38,7 @@ def load_t_net():
 
 def load_s_net():
     new_model = small_model.gNet()
-
-
+    new_model = torch.nn.DataParallel(new_model).module
     model_file = "gj_TS/student.pth"
     model_parameters = torch.load(model_file)
     new_model.load_state_dict(model_parameters)
@@ -89,8 +88,10 @@ def see_t_net():
         depth = prediction_d.squeeze(-3)
 
         depth = depth.detach().cpu().numpy().squeeze()
-        inv_depth = 1.0 / depth
-        im = Image.fromarray(inv_depth.numpy())
+        inv_depth = 1.0 / depth * 255
+        im = Image.fromarray(inv_depth)
+        if im.mode == "F":
+            im = im.convert("L")
         im.save("gj_TS/"+str(frame_id)+".jpg")
         print("ok")
 
