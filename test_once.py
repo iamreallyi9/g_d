@@ -54,6 +54,7 @@ def test():
     #summary(tnet,x)
 
 def hook(module, inputdata, output):
+    global T_mid_feature
     T_mid_feature = []
     T_mid_feature.append(output.data)
 
@@ -68,7 +69,7 @@ def test_model():
     hh = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
     y =net(x)
     hh.remove()
-    print(T_mid_feature)
+
 
 def make_my_model():
     net = small_model.gNet()
@@ -76,6 +77,7 @@ def make_my_model():
     summary(net,x)
 
 def compare():
+    global T_mid_feature
     # 数据集
     data_loader =load_data()
     #teacher——net
