@@ -39,6 +39,10 @@ def load_t_net():
 def load_s_net():
     new_model = small_model.gNet()
     new_model = torch.nn.DataParallel(new_model)
+
+    if isinstance(new_model, torch.nn.DataParallel):
+        new_model = new_model.module
+
     model_file = "gj_TS/student.pth"
     model_parameters = torch.load(model_file)
     new_model.load_state_dict(model_parameters)
