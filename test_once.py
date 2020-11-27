@@ -24,7 +24,7 @@ def load_data():
     frames = [i for i in range(92)]
     dataset = VideoFrameDataset(color_fmt, frames)
     data_loader = DataLoader(
-        dataset, batch_size=2, shuffle=False, num_workers=4
+        dataset, batch_size=1, shuffle=False, num_workers=4
     )
     return data_loader
 
@@ -59,7 +59,9 @@ def id2image(id,trans):
     return labels
 
 def see_t_net():
-    net = load_t_net()
+    # 记得修改batchsize
+    #net = load_t_net()
+    net =load_s_net()
     data_loader = load_data()
     net.eval()
     for data in data_loader:
@@ -72,11 +74,12 @@ def see_t_net():
         shape = images.shape
 
         C, H, W = shape[-3:]
-        images = images.reshape(-1, C, H, W).cuda()
+        images = images.reshape(-1, C, H, W).cuda().double()
 
         # depth = nmodel.forward(stacked_images, metadata)
         # print(depth)
         prediction_d = net.forward(images)[0]  # 0is depth .1 is confidence
+
 
         out_shape = shape[:-3] + prediction_d.shape[-2:]
         prediction_d = prediction_d.reshape(out_shape)
@@ -86,8 +89,8 @@ def see_t_net():
 
         depth = depth.detach().cpu().numpy().squeeze()
         inv_depth = 1.0 / depth
-        im = Image.fromarray(inv_depth)
-        im.save("gj_TS/"+str(frame_id)+"png")
+        im = Image.fromarray(inv_depth.numpy())
+        im.save("gj_TS/"+str(frame_id)+".jpg")
         print("ok")
 
 
