@@ -58,7 +58,13 @@ def hook(module, inputdata, output):
 def test_model():
     net = load_t_net()
     for param in net.named_parameters():
-        print(param)
+        #print(param[0])
+        pass
+    hh = net.seq[3]
+    print(hh)
+    handle = net.seq[3].list[0][3].list[0][4].convs
+    print(handle)
+
 
 def compare():
     # 数据集
