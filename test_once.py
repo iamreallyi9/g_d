@@ -60,7 +60,8 @@ def id2image(id,trans):
 
 def see_t_net():
     net = load_t_net()
-    data_loader = load_t_net()
+    data_loader = load_data()
+    net.eval()
     for data in data_loader:
         data = to_device(data)
         stacked_images, metadata = data
@@ -71,7 +72,8 @@ def see_t_net():
         shape = images.shape
 
         C, H, W = shape[-3:]
-        images = images.reshape(-1, C, H, W)
+        images = images.reshape(-1, C, H, W).cuda()
+
         # depth = nmodel.forward(stacked_images, metadata)
         # print(depth)
         prediction_d = net.forward(images)[0]  # 0is depth .1 is confidence
@@ -86,6 +88,7 @@ def see_t_net():
         inv_depth = 1.0 / depth
         im = Image.fromarray(inv_depth)
         im.save("gj_TS/"+str(frame_id)+"png")
+        print("ok")
 
 
 
