@@ -57,20 +57,28 @@ def hook(module, inputdata, output):
     global T_mid_feature
     T_mid_feature = []
     T_mid_feature.append(output.data)
+    print(output.data.size)
 
 
 def test_model():
     net = load_t_net()
     #net = HourglassModel(3)
-    x = torch.randn(1,3,384,224)
+    x = torch.randn(1,3,384,224).cuda()
     for param in net.named_parameters():
         print(param[0])
-        
-    hh = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
+
+    hh0 = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][0].register_forward_hook(hook)
+    hh1 = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
+    hh2 = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[1][0].register_forward_hook(hook)
+    hh3 = net.module.seq[3].list[0][3].list[0][3].list[1][3].list[1][1].register_forward_hook(hook)
     y =net(x)
-    print("===========")
+    print("=++++++++++++++++++++=")
     summary(net.module,x)
-    hh.remove()
+    hh0.remove()
+    hh1.remove()
+    hh2.remove()
+    hh3.remove()
+
 
 
 def make_my_model():
