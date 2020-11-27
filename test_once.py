@@ -39,6 +39,7 @@ def load_t_net():
 def load_s_net():
     new_model = small_model.gNet()
 
+
     model_file = "gj_TS/student.pth"
     model_parameters = torch.load(model_file)
     new_model.load_state_dict(model_parameters)
@@ -92,7 +93,6 @@ def see_t_net():
         im = Image.fromarray(inv_depth.numpy())
         im.save("gj_TS/"+str(frame_id)+".jpg")
         print("ok")
-
 
 
 def hook(module, inputdata, output):
@@ -195,7 +195,7 @@ def compare():
             print('[%d, %5d] loss: %.4f loss1: %.4f loss2: %.4f' % (
             epoch + 1, (i + 1) * batch_size, loss.item(), loss1.item(), loss2.item()))
 
-        torch.save(net_s, 'gj_TS/student.pth')
+        torch.save(net_s.module.state_dict(), 'gj_TS/student.pth')
         time_end = time.time()
         print('Time cost:', time_end - time_start, "s")
 
