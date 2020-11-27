@@ -5,10 +5,10 @@ from torch.utils.data import DataLoader
 from gj_hourglass import HourglassModel
 from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
-import optimizer
+
 from loaders.video_dataset import VideoDataset, VideoFrameDataset
 import torchvision.transforms as transforms
-from monodepth import mannequin_challenge_model as mcm
+
 from utils.torch_helpers import to_device
 from torchsummaryX import summary
 import torch.autograd as autograd
@@ -58,16 +58,36 @@ def id2image(id,trans):
     #id =id.item()
     return labels
 
-def test():
+def see_t_net():
+    net = load_t_net()
+    data_loader = load_t_net()
+    for data in data_loader:
+        data = to_device(data)
+        stacked_images, metadata = data
+        frame_id = metadata["frame_id"][0]
+        images = autograd.Variable(stacked_images.cuda(), requires_grad=False)
 
-    net = small_model.AutoEncoder()
-    tnet = load_t_net()
-    x = torch.randn(1,3,384,224)
-    y = tnet(x)
-    print(y.size(),y.type())
-    print("djdjdjdhdhdhdfhddhdhdhdhdh")
-    print(y)
-    #summary(tnet,x)
+        # Reshape ...CHW -> XCHW
+        shape = images.shape
+
+        C, H, W = shape[-3:]
+        images = images.reshape(-1, C, H, W)
+        # depth = nmodel.forward(stacked_images, metadata)
+        # print(depth)
+        prediction_d = net.forward(images)[0]  # 0is depth .1 is confidence
+
+        out_shape = shape[:-3] + prediction_d.shape[-2:]
+        prediction_d = prediction_d.reshape(out_shape)
+
+        prediction_d = torch.exp(prediction_d)
+        depth = prediction_d.squeeze(-3)
+
+        depth = depth.detach().cpu().numpy().squeeze()
+        inv_depth = 1.0 / depth
+        im = Image.fromarray(inv_depth)
+        im.save("gj_TS/"+str(frame_id)+"png")
+
+
 
 def hook(module, inputdata, output):
     global T_mid_feature
@@ -109,6 +129,7 @@ def compare():
     net_s = nn.DataParallel(net_s)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     criterion = nn.MSELoss(reduction='mean').to(device)
+
     criterion2 = nn.KLDivLoss()
 
     optimizer = optim.Adam(net_s.parameters(), lr=0.001)
@@ -128,12 +149,11 @@ def compare():
         running_loss = 0.
         batch_size = 2
 
-        alpha = 0.7
+        alpha = 0.3
 
         for i, data in enumerate( data_loader):
             images, labels = data
             #labels = id2image(labels['frame_id'],transf)
-
 
             #images = autograd.Variable(inputs.cuda(), requires_grad=False)
             # Reshape ...CHW -> XCHW
@@ -157,10 +177,10 @@ def compare():
 
             #注销hook
             hh.remove()
-            loss1 = 1 - s_loss.forward(output_s_features, T_mid_feature[0])
-            loss2 = criterion(output_s_depth,output_t)
-            #loss1 = criterion(output_s_features, T_mid_feature[0])
-            #loss2 = 1 - s_loss.forward(output_s_depth,output_t)
+            #loss1 = 1 - s_loss.forward(output_s_features, T_mid_feature[0])
+            #loss2 = criterion(output_s_depth,output_t)
+            loss1 = criterion(output_s_features, T_mid_feature[0])
+            loss2 = 1 - s_loss.forward(output_s_depth,output_t)
 
             loss = loss1 * (1 - alpha) + loss2 * alpha
             loss.backward()
@@ -178,5 +198,6 @@ def compare():
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
     #make_my_model()
-    compare()
+    #compare()
+    see_t_net()
 
