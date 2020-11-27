@@ -42,9 +42,10 @@ def id2image(id,trans):
     for i in id:
         path = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/depth/frame_{:06d}.png".format(i)
         image = np.array(Image.open(path)) / 255
-        image = trans(image)
+        #image = trans(image)
         labels.append(image)
-    labels = torch.cat(labels,dim=0)
+    labels = np.array(labels)
+    labels = torch.from_numpy(labels)
     print(labels.shape)
     #id =id.item()
     return labels
@@ -123,7 +124,7 @@ def compare():
 
         for i, data in enumerate( data_loader):
             images, labels = data
-            labels = id2image(labels['frame_id'],transf)
+            #labels = id2image(labels['frame_id'],transf)
 
 
             #images = autograd.Variable(inputs.cuda(), requires_grad=False)
@@ -134,7 +135,7 @@ def compare():
             images = images.reshape(-1, C, H, W)
 
             images = images.to(device).double()
-            labels = labels.to(device).double()
+            #labels = labels.to(device).double()
 
             optimizer.zero_grad()
 
