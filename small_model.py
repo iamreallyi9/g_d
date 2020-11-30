@@ -137,7 +137,7 @@ class MobileNetV2(nn.Module):
         return out
 
 
-def SmallMCM(DepthModel):
+def SmallMCM():
     # Requirements and default settings
     align = 16
     learning_rate = 0.0004
