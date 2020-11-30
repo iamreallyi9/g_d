@@ -103,7 +103,11 @@ class Pix2PixModel(base_model.BaseModel):
                 else:
                     print('Something Wrong')
                     sys.exit()
+                    # 以下内容为自己加的，将netG替换为small
 
+                print("load model ->ok")
+                model_file = "/data/consistent_depth/gj_TS/student.pth"
+                model_parameters = torch.load(model_file)
                 new_model.load_state_dict(model_parameters)
 
             new_model = torch.nn.DataParallel(new_model)
@@ -114,15 +118,6 @@ class Pix2PixModel(base_model.BaseModel):
         else:
             print('ONLY SUPPORT Ours_Bilinear')
             sys.exit()
-        #以下内容为自己加的，将netG替换为small
-        new_model = small_model.gNet()
-        new_model = torch.nn.DataParallel(new_model).module
-        new_model.to("cuda")
-        model_file = "/data/consistent_depth/gj_TS/student.pth"
-        model_parameters = torch.load(model_file)
-        new_model.load_state_dict(model_parameters)
-        self.netG = new_model
-        print("load model ->ok")
 
         self.old_lr = opt.lr
         self.netG.train()
