@@ -64,7 +64,9 @@ def see_t_net():
     net =load_s_net()
     data_loader = load_data()
     net.eval()
+    num = 0
     for data in data_loader:
+        num +=1
         data = to_device(data)
         stacked_images, metadata = data
         frame_id = metadata["frame_id"][0]
@@ -92,7 +94,7 @@ def see_t_net():
         im = Image.fromarray(inv_depth)
         if im.mode == "F":
             im = im.convert("L")
-        im.save("gj_TS/"+str(frame_id)+".jpg")
+        im.save("gj_TS/"+str(num)+".jpg")
         print("ok")
 
 
@@ -132,8 +134,9 @@ def compare():
     net_t = load_t_net()
 
     #student——net
-    net_s = small_model.gNet()
-    net_s = nn.DataParallel(net_s)
+    net_s = load_s_net()
+    #net_s = small_model.gNet()
+    #net_s = nn.DataParallel(net_s)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     criterion = nn.MSELoss(reduction='mean').to(device)
 
@@ -156,7 +159,7 @@ def compare():
         running_loss = 0.
         batch_size = 2
 
-        alpha = 0.3
+        alpha = 0.7
 
         for i, data in enumerate( data_loader):
             images, labels = data
@@ -205,6 +208,6 @@ def compare():
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
     #make_my_model()
-    #compare()
-    see_t_net()
+    compare()
+    #see_t_net()
 
