@@ -24,6 +24,7 @@ from loss.loss_params import LossParams
 from utils import image_io, visualization
 from utils.torch_helpers import to_device
 from torchsummaryX import summary
+import small_model
 
 class DepthFineTuningParams:
     """Options about finetune parameters.
@@ -149,8 +150,9 @@ class DepthFineTuner:
         self.checkpoints_dir = pjoin(self.out_dir, "checkpoints")
         os.makedirs(self.checkpoints_dir, exist_ok=True)
 
-        model = get_depth_model(params.model_type)
-        self.model = model()
+        # model = get_depth_model(params.model_type)
+        # self.model = model()
+        self.model = small_model.SmallMCM()
 
         num_gpus = torch.cuda.device_count()
         print(f"Using {num_gpus} GPUs.")
