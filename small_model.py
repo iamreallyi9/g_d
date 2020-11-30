@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import torch.autograd as autograd
+from monodepth.mannequin_challenge.options.train_options import TrainOptions
 
 class gNet(nn.Module):
     def __init__(self):
@@ -143,7 +144,12 @@ def SmallMCM(DepthModel):
     lambda_view_baseline = 0.1
 
     def __init__(self):
-        super().__init__()
+        #super().__init__()
+        parser = TrainOptions()
+        parser.initialize()
+        params = parser.parser.parse_args(["--input", "single_view"])
+        params.isTrain = False
+
         model_file = "/data/consistent_depth/gj_TS/student.pth"
         self.model =gNet()
         model_parameters = torch.load(model_file)
