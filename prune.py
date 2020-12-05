@@ -59,7 +59,7 @@ def load_t_net(file = False):
 
 def test_big():
     model = load_t_net()
-    print(list(model.module.named_parameters()))
+    print(list(model.module.seq[3].named_parameters()))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("===========================")
     x=torch.randn(1,3,384,224).to(device)
@@ -68,6 +68,8 @@ def test_big():
     parameters_to_prune = (
         (model.module.seq[3].list[0][3].list[0][3].list[0][1].convs[2][3], 'weight'),
         (model.module.seq[3].list[0][3].list[0][3].list[0][1].convs[3][0], 'weight'),
+        (model.module.seq[3].list[0][3].list[0][3].list[0][1].convs[1][0], 'weight'),
+        (model.module.seq[0].conv,'weight')
     )
     prune.global_unstructured(
         parameters_to_prune,
