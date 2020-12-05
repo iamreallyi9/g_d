@@ -16,6 +16,7 @@ import numpy as np
 import ts_loss
 import small_model
 from PIL import Image
+import gj_dataset
 import numpy as np
 T_mid_feature=[]
 
@@ -38,8 +39,11 @@ def load_t_net():
 
 def load_s_net():
     new_model = small_model.gNet()
-    new_model = torch.nn.DataParallel(new_model).module
-    model_file = "gj_TS/student.pth"
+    new_model = torch.nn.DataParallel(new_model)
+    #new_model = torch.nn.DataParallel(new_model).module
+    model_file = "gj_TS/student_big_data.pth"
+    #model_file = "gj_TS/0020.pth"
+    #model_file = "gj_TS/student.pth"
     model_parameters = torch.load(model_file)
     new_model.load_state_dict(model_parameters)
     return new_model
@@ -62,39 +66,47 @@ def see_t_net():
     # 记得修改batchsize
     #net = load_t_net()
     net =load_s_net()
-    data_loader = load_data()
+    data_loader = gj_dataset.use_this_data()
+    #data_loader = load_data()
     net.eval()
     num = 0
     for data in data_loader:
         num +=1
         data = to_device(data)
-        stacked_images, metadata = data
-        frame_id = metadata["frame_id"][0]
+        stacked_images = data
+        #stacked_images, metadata = data
+        #frame_id = metadata["frame_id"][0]
         images = autograd.Variable(stacked_images.cuda(), requires_grad=False)
 
         # Reshape ...CHW -> XCHW
         shape = images.shape
 
         C, H, W = shape[-3:]
-        images = images.reshape(-1, C, H, W).cuda().double()
-
+        #images = images.reshape(-1, C, H, W).cuda().double()
+        #images = images.reshape(-1,W,C,H).cuda().double()
+        images = images.transpose(1,3)
+        images = images.transpose(2,3)
+        print(images.shape)
         # depth = nmodel.forward(stacked_images, metadata)
         # print(depth)
         prediction_d = net.forward(images)[0]  # 0is depth .1 is confidence
 
-
+    
+        print("================")
         out_shape = shape[:-3] + prediction_d.shape[-2:]
+        print(out_shape)
         prediction_d = prediction_d.reshape(out_shape)
 
         prediction_d = torch.exp(prediction_d)
         depth = prediction_d.squeeze(-3)
-
+        print(depth.shape)
+        print("///////////////////")
         depth = depth.detach().cpu().numpy().squeeze()
         inv_depth = 1.0 / depth * 255
         im = Image.fromarray(inv_depth)
         if im.mode == "F":
             im = im.convert("L")
-        im.save("gj_TS/"+str(num)+".jpg")
+        im.save("gj_TS/"+str(num+1000)+".jpg")
         print("ok")
 
 
@@ -134,9 +146,9 @@ def compare():
     net_t = load_t_net()
 
     #student——net
-    net_s = load_s_net()
-    #net_s = small_model.gNet()
-    #net_s = nn.DataParallel(net_s)
+    #net_s = load_s_net()
+    net_s = small_model.gNet()
+    net_s = nn.DataParallel(net_s)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     criterion = nn.MSELoss(reduction='mean').to(device)
 
@@ -171,7 +183,7 @@ def compare():
 
             C, H, W = shape[-3:]
             images = images.reshape(-1, C, H, W)
-
+            print(images.shape)
             images = images.to(device).double()
             #labels = labels.to(device).double()
 
@@ -199,15 +211,24 @@ def compare():
             print('[%d, %5d] loss: %.4f loss1: %.4f loss2: %.4f' % (
             epoch + 1, (i + 1) * batch_size, loss.item(), loss1.item(), loss2.item()))
 
-        torch.save(net_s.module.state_dict(), 'gj_TS/student.pth')
+        torch.save(net_s.state_dict(), 'gj_TS/student.pth')
         time_end = time.time()
         print('Time cost:', time_end - time_start, "s")
 
     print('Finished Training')
+def see_raw():
+    a= load_data()
+    for i, data in enumerate( a):
+        images,_=data
+        debug_img = transforms.ToPILImage()(images[0, :, :, :].float().cpu())
+        debug_img.save("see_raw.jpg")
+        break
+
 
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
     #make_my_model()
-    compare()
+    #compare()
     #see_t_net()
+    see_raw()
 
