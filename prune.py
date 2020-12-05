@@ -1,18 +1,10 @@
-from monodepth.mannequin_challenge.models import hourglass
-from monodepth import mannequin_challenge_model as mcm
-from torch.utils.data import DataLoader
-from loaders.video_dataset import VideoDataset, VideoFrameDataset
-import torch
-from utils.torch_helpers import to_device
-import os
-from monodepth.depth_model_registry import get_depth_model
+from gj_hourglass import HourglassModel
 from torchsummaryX import summary
-
 import torch
 from torch import nn
 import torch.nn.utils.prune as prune
 import torch.nn.functional as F
-
+import os.path
 def new_prune():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -36,7 +28,7 @@ def new_prune():
             return x
 
     model = LeNet().to(device=device)
-    x = torch.randn(1,1,28,28)
+    x = torch.randn(1,1,28,28).to(device)
     summary(model,x)
 
 
@@ -53,8 +45,24 @@ def new_prune():
         pruning_method=prune.L1Unstructured,
         amount=0.2,
     )
-    x = torch.randn(1, 1, 28, 28)
+    x = torch.randn(1, 1, 28, 28).to(device)
     summary(model, x)
 
+def load_t_net(file = False):
+    new_model = HourglassModel(3)
+    new_model = torch.nn.DataParallel(new_model)
+    if file==True:
+        model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
+        model_parameters = torch.load(model_file)
+        new_model.load_state_dict(model_parameters)
+    return new_model
+def test_big():
+    model = load_t_net()
+    print(model.named_parameters())
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("===========================")
+    x=torch.randn(1,3,384,224).to(device)
+    summary(model,x)
+
 if __name__ == '__main__':
-    new_prune()
+    test_big()
