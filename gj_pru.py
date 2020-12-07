@@ -1,123 +1,215 @@
-from monodepth.mannequin_challenge.models import hourglass
-from monodepth import mannequin_challenge_model as mcm
-from torch.utils.data import DataLoader
-from loaders.video_dataset import VideoDataset, VideoFrameDataset
-import torch
-from utils.torch_helpers import to_device
 import os
-from monodepth.depth_model_registry import get_depth_model
-from torchsummaryX import summary
-import torch.autograd as autograd
-import nni
-from nni.compression.torch import LevelPruner, SlimPruner,FPGMPruner,AMCPruner
-from nni.compression.torch.utils.counter import count_flops_params
+import argparse
+import torch
+import torch.nn as nn
+from torch.autograd import Variable
+from torchvision import datasets, transforms
+from gj_hourglass import HourglassModel as Hnet
+import numpy as np
 
-def get_dep():
-    color_fmt = 'results/ayush/color_down/frame_{:06d}.raw'
-    depth_dir = 'esults/ayush/depth_mc/depth'
+parser = argparse.ArgumentParser()
+parser.add_argument('--data', action='store', default='../data',
+                    help='dataset path')
+parser.add_argument('--cpu', action='store_true',
+                    help='disables CUDA training')
+# percent(剪枝率)
+parser.add_argument('--percent', type=float, default=0.5,
+                    help='nin:0.5')
+# 正常|规整剪枝标志
+parser.add_argument('--normal_regular', type=int, default=1,
+                    help='--normal_regular_flag (default: normal)')
+# model层数
+parser.add_argument('--layers', type=int, default=9,
+                    help='layers (default: 9)')
+# 稀疏训练后的model
+parser.add_argument('--model', default='models_save/nin_preprune.pth', type=str, metavar='PATH',
+                    help='path to raw trained model (default: none)')
+# 剪枝后保存的model
+parser.add_argument('--save', default='models_save/nin_prune.pth', type=str, metavar='PATH',
+                    help='path to save prune model (default: none)')
+args = parser.parse_args()
+base_number = args.normal_regular
+layers = args.layers
+print(args)
 
-    # model = get_depth_model("mc")
+if base_number <= 0:
+    print('\r\n!base_number is error!\r\n')
+    base_number = 1
 
-    nmodel = mcm.MannequinChallengeModel()
-    print(nmodel)
-    # new_model = hourglass.HourglassModel(3)
+model = Hnet(3)
+if args.model:
+    if os.path.isfile(args.model):
+        print("=> loading checkpoint '{}'".format(args.model))
+        model.load_state_dict(torch.load(args.model)['state_dict'])
+    else:
+        print("=> no checkpoint found at '{}'".format(args.resume))
+print('旧模型: ', model)
+total = 0
+i = 0
+for m in model.modules():
+    if isinstance(m, nn.BatchNorm2d):
+        if i < layers - 1:
+            i += 1
+            total += m.weight.data.shape[0]
 
-    frames = [i for i in range(92)]
+# 确定剪枝的全局阈值
+bn = torch.zeros(total)
+index = 0
+i = 0
+for m in model.modules():
+    if isinstance(m, nn.BatchNorm2d):
+        if i < layers - 1:
+            i += 1
+            size = m.weight.data.shape[0]
+            bn[index:(index + size)] = m.weight.data.abs().clone()
+            index += size
+y, j = torch.sort(bn)
+thre_index = int(total * args.percent)
+if thre_index == total:
+    thre_index = total - 1
+thre_0 = y[thre_index]
 
-    dataset = VideoFrameDataset(color_fmt, frames)
-    data_loader = DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=4
-    )
+# ********************************预剪枝*********************************
+pruned = 0
+cfg_0 = []
+cfg = []
+cfg_mask = []
+i = 0
+for k, m in enumerate(model.modules()):
+    if isinstance(m, nn.BatchNorm2d):
+        if i < layers - 1:
+            i += 1
 
-    torch.backends.cudnn.enabled = True
-    torch.backends.cudnn.benchmark = True
-    nmodel.eval()
+            weight_copy = m.weight.data.clone()
+            mask = weight_copy.abs().gt(thre_0).float()
+            remain_channels = torch.sum(mask)
 
-    # os.makedirs(depth_dir, exist_ok=True)
-    for data in data_loader:
-        data = to_device(data)
-        stacked_images, metadata = data
-        frame_id = metadata["frame_id"][0]
+            if remain_channels == 0:
+                print('\r\n!please turn down the prune_ratio!\r\n')
+                remain_channels = 1
+                mask[int(torch.argmax(weight_copy))] = 1
 
-        # depth = nmodel.forward(stacked_images, metadata)
-        # print(depth)
-        depth = nmodel.estimate_depth(stacked_images)
+            # ******************规整剪枝******************
+            v = 0
+            n = 1
+            if remain_channels % base_number != 0:
+                if remain_channels > base_number:
+                    while v < remain_channels:
+                        n += 1
+                        v = base_number * n
+                    if remain_channels - (v - base_number) < v - remain_channels:
+                        remain_channels = v - base_number
+                    else:
+                        remain_channels = v
+                    if remain_channels > m.weight.data.size()[0]:
+                        remain_channels = m.weight.data.size()[0]
+                    remain_channels = torch.tensor(remain_channels)
 
-        depth = depth.detach().cpu().numpy().squeeze()
-        inv_depth = 1.0 / depth
-    print(inv_depth)
-    # print ("83")
-    iut = torch.randn(1, 3, 384, 224)
-    summary(nmodel.model.netG,iut)
-
-def only_g():
-    color_fmt = 'results/ayush/color_down/frame_{:06d}.raw'
-    depth_dir = 'esults/ayush/depth_mc/depth'
-    frames = [i for i in range(92)]
-
-    dataset = VideoFrameDataset(color_fmt, frames)
-    data_loader = DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=4
-    )
-
-    new_model = hourglass.HourglassModel(3)
-    model_file = "checkpoints/mc.pth"
-    model_parameters = torch.load(model_file)
-    new_model.load_state_dict(model_parameters)
-
-    new_model = torch.nn.DataParallel(new_model)
-
-    torch.backends.cudnn.enabled = True
-    torch.backends.cudnn.benchmark = True
-    new_model.eval()
-
-    # os.makedirs(depth_dir, exist_ok=True)
-    for data in data_loader:
-        data = to_device(data)
-        stacked_images, metadata = data
-        frame_id = metadata["frame_id"][0]
-        images = autograd.Variable(stacked_images.cuda(), requires_grad=False)
-
-        # Reshape ...CHW -> XCHW
-        shape = images.shape
-
-        C, H, W = shape[-3:]
-        images = images.reshape(-1, C, H, W)
-        # depth = nmodel.forward(stacked_images, metadata)
-        # print(depth)
-        prediction_d = new_model.forward(images)[0]  # 0is depth .1 is confidence
-
-        out_shape = shape[:-3] + prediction_d.shape[-2:]
-        prediction_d = prediction_d.reshape(out_shape)
-
-        prediction_d = torch.exp(prediction_d)
-        depth = prediction_d.squeeze(-3)
-
-        depth = depth.detach().cpu().numpy().squeeze()
-        inv_depth = 1.0 / depth
-    print(inv_depth)
+                    y, j = torch.sort(weight_copy.abs())
+                    thre_1 = y[-remain_channels]
+                    mask = weight_copy.abs().ge(thre_1).float()
+            pruned = pruned + mask.shape[0] - torch.sum(mask)
+            m.weight.data.mul_(mask)
+            m.bias.data.mul_(mask)
+            cfg_0.append(mask.shape[0])
+            cfg.append(int(remain_channels))
+            cfg_mask.append(mask.clone())
+            print('layer_index: {:d} \t total_channel: {:d} \t remaining_channel: {:d} \t pruned_ratio: {:f}'.
+                  format(k, mask.shape[0], int(torch.sum(mask)), (mask.shape[0] - torch.sum(mask)) / mask.shape[0]))
+pruned_ratio = float(pruned / total)
+print('\r\n!预剪枝完成!')
+print('total_pruned_ratio: ', pruned_ratio)
 
 
-    configure_list =[{'sparsity':0.5,'op_types':['Conv2d']}]
-    #configure_list = [{'op_types':['Conv2d']}]
+# ********************************预剪枝后model测试*********************************
+def test():
+    test_loader = torch.utils.data.DataLoader(
+        datasets.CIFAR10(root=args.data, train=False, transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])),
+        batch_size=64, shuffle=False, num_workers=1)
+    model.eval()
+    correct = 0
 
-    pruner =FPGMPruner(new_model,configure_list)
-    #pruner = AMCPruner(new_model,configure_list)
-    p_model = pruner.compress()
+    for data, target in test_loader:
+        if not args.cpu:
+            data, target = data.cuda(), target.cuda()
+        data, target = Variable(data), Variable(target)
+        output = model(data)
+        pred = output.data.max(1, keepdim=True)[1]
+        correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+    acc = 100. * float(correct) / len(test_loader.dataset)
+    print('Accuracy: {:.2f}%\n'.format(acc))
+    return
 
-    m_path = 'pkl_model/my_pr.pkl'
-    #torch.save(new_model,m_path)
-    # iut = torch.randn(1, 3, 384, 224)
-    # summary(new_model, iut)
 
-def load():
-    m_path = 'pkl_model/my_pr.pkl'
-    a=torch.load(m_path)
-    #print(a)
-    iut = torch.randn(1, 3, 384, 224)
-    summary(a, iut)
+print('************预剪枝模型测试************')
+if not args.cpu:
+    model.cuda()
+test()
 
-if __name__ == '__main__':
-    #get_dep()
-    only_g()
-    load()
+# ********************************剪枝*********************************
+newmodel = nin.Net(cfg)
+if not args.cpu:
+    newmodel.cuda()
+layer_id_in_cfg = 0
+start_mask = torch.ones(3)
+end_mask = cfg_mask[layer_id_in_cfg]
+i = 0
+for [m0, m1] in zip(model.modules(), newmodel.modules()):
+    if isinstance(m0, nn.BatchNorm2d):
+        if i < layers - 1:
+            i += 1
+            idx1 = np.squeeze(np.argwhere(np.asarray(end_mask.cpu().numpy())))
+            if idx1.size == 1:
+                idx1 = np.resize(idx1, (1,))
+            m1.weight.data = m0.weight.data[idx1].clone()
+            m1.bias.data = m0.bias.data[idx1].clone()
+            m1.running_mean = m0.running_mean[idx1].clone()
+            m1.running_var = m0.running_var[idx1].clone()
+            layer_id_in_cfg += 1
+            start_mask = end_mask.clone()
+            if layer_id_in_cfg < len(cfg_mask):
+                end_mask = cfg_mask[layer_id_in_cfg]
+        else:
+            m1.weight.data = m0.weight.data.clone()
+            m1.bias.data = m0.bias.data.clone()
+            m1.running_mean = m0.running_mean.clone()
+            m1.running_var = m0.running_var.clone()
+    elif isinstance(m0, nn.Conv2d):
+        if i < layers - 1:
+            idx0 = np.squeeze(np.argwhere(np.asarray(start_mask.cpu().numpy())))
+            idx1 = np.squeeze(np.argwhere(np.asarray(end_mask.cpu().numpy())))
+            if idx0.size == 1:
+                idx0 = np.resize(idx0, (1,))
+            if idx1.size == 1:
+                idx1 = np.resize(idx1, (1,))
+            w = m0.weight.data[:, idx0, :, :].clone()
+            m1.weight.data = w[idx1, :, :, :].clone()
+            m1.bias.data = m0.bias.data[idx1].clone()
+        else:
+            idx0 = np.squeeze(np.argwhere(np.asarray(start_mask.cpu().numpy())))
+            if idx0.size == 1:
+                idx0 = np.resize(idx0, (1,))
+            m1.weight.data = m0.weight.data[:, idx0, :, :].clone()
+            m1.bias.data = m0.bias.data.clone()
+    elif isinstance(m0, nn.Linear):
+        idx0 = np.squeeze(np.argwhere(np.asarray(start_mask.cpu().numpy())))
+        if idx0.size == 1:
+            idx0 = np.resize(idx0, (1,))
+        m1.weight.data = m0.weight.data[:, idx0].clone()
+# ******************************剪枝后model测试*********************************
+print('新模型: ', newmodel)
+print('**********剪枝后新模型测试*********')
+model = newmodel
+test()
+# ******************************剪枝后model保存*********************************
+print('**********剪枝后新模型保存*********')
+torch.save({'cfg': cfg, 'state_dict': newmodel.state_dict()}, args.save)
+print('**********保存成功*********\r\n')
+
+# *****************************剪枝前后model对比********************************
+print('************旧模型结构************')
+print(cfg_0)
+print('************新模型结构************')
+print(cfg, '\r\n')
