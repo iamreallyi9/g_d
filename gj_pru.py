@@ -7,8 +7,16 @@ from torchvision import datasets, transforms
 from gj_hourglass import HourglassModel as Hnet
 import numpy as np
 
+def load_t_net():
+    new_model = Hnet(3)
+    new_model = torch.nn.DataParallel(new_model)
+    model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
+    model_parameters = torch.load(model_file)
+    new_model.load_state_dict(model_parameters)
+    return new_model
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--data', action='store', default='../data',
+parser.add_argument('--data', action='store', default='../zhibo_folder',
                     help='dataset path')
 parser.add_argument('--cpu', action='store_true',
                     help='disables CUDA training')
@@ -36,13 +44,14 @@ if base_number <= 0:
     print('\r\n!base_number is error!\r\n')
     base_number = 1
 
-model = Hnet(3)
+model = load_t_net()
+
 if args.model:
     if os.path.isfile(args.model):
         print("=> loading checkpoint '{}'".format(args.model))
         model.load_state_dict(torch.load(args.model)['state_dict'])
     else:
-        print("=> no checkpoint found at '{}'".format(args.resume))
+        print("=> no checkpoint found at '{}'".format(args.model))
 print('旧模型: ', model)
 total = 0
 i = 0
@@ -68,6 +77,7 @@ thre_index = int(total * args.percent)
 if thre_index == total:
     thre_index = total - 1
 thre_0 = y[thre_index]
+print(y,thre_0)
 
 # ********************************预剪枝*********************************
 pruned = 0
