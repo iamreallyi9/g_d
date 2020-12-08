@@ -52,39 +52,53 @@ def load_t_net(file = False):
     new_model = HourglassModel(3)
     new_model = torch.nn.DataParallel(new_model)
     if file==True:
-        model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
+        #model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0002.pth"
+        model_file = "0020.pth"
+        #model_file = 'gj_dir/after.pth'
         model_parameters = torch.load(model_file)
         new_model.load_state_dict(model_parameters)
     return new_model
 
 def test_big():
-    model = load_t_net()
-    print(list(model.module.seq[3].list[1][0].named_parameters()))
+    model = load_t_net(file=True)
+    #print(model.module.state_dict().key())
+    #print(list(model.module.seq[0].named_parameters()))
+    #print(list(model.module.named_modules()))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("===========================")
-    x=torch.randn(1,3,384,224).to(device)
+    x = torch.randn(1,3,384,224).to(device)
     summary(model,x)
-
+    num =0
+ 
+    for name ,mod in model.module.named_modules():
+        
+        num+=1
+        if num %40==0:
+            continue
+        if isinstance(mod,torch.nn.Conv2d):
+            print("yes")
+            prune.l1_unstructured(mod,name='weight',amount=0.5)
+        else:
+            print("no")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("++++++++++++++++++++++++++++++++++++++++++++++++++++=")
     parameters_to_prune = (
         (model.module.seq[3].list[0][3].list[0][3].list[0][1].convs[2][3], 'weight'),
         (model.module.seq[3].list[0][3].list[0][3].list[0][1].convs[3][0], 'weight'),
-        (model.module.seq[3].list[0][1], 'weight'),
-        (model.module.seq[3].list[0][2], 'weight'),
-        (model.module.seq[3].list[0][2], 'weight'),
-        (model.module.seq[3].list[0][3], 'weight'),
-        (model.module.seq[3].list[1][0], 'weight'),
-        (model.module.seq[3].list[0][4], 'weight'),
-        (model.module.seq[3].list[0][3].list[1][1], 'weight'),
-        (model.module.seq[3].list[0][3].list[1][0], 'weight'),
-        (model.module.seq[0].conv,'weight')
-    )
-    prune.global_unstructured(
-        parameters_to_prune,
-        pruning_method=prune.L1Unstructured,
-        amount=0.2,
-    )
+        (model.module.seq[3].list[0][3].list[1][1].convs[0][0],'weight'),
+        (model.module.seq[0],'weight')    
+
+)
+    #prune.global_unstructured(parameters_to_prune, pruning_method=prune.L1Unstructured, amount=0.2)
     x = torch.randn(1, 3, 384, 224).to(device)
+    summary(model, x)
+    #prune.remove(model,'weight')
+    torch.save(model, 'gj_dir/after.pth.tar')
+
+def load_pru_mod():
+    path = "./gj_dir/after.pth.tar"
+    model = torch.load(path)
+    x = torch.randn(1,3,384,224)
     summary(model, x)
 
 if __name__ == '__main__':
-    test_big()
+    load_pru_mod()
