@@ -1,5 +1,6 @@
 from nni.compression.torch import L1FilterPruner
 from nni.compression.torch import TaylorFOWeightFilterPruner
+from nni.compression.torch import ActivationMeanRankFilterPruner
 from gj_hourglass import HourglassModel
 import torch
 from torchsummaryX import summary
@@ -10,9 +11,9 @@ def test_nni(model):
         'sparsity': 0.5,
         'op_types': ['Conv2d']
     }]
-    pruner = TaylorFOWeightFilterPruner(model, config_list, statistics_batch_num=1)
-    pruner.compress()
-    print(pruner)
+    pruner = ActivationMeanRankFilterPruner(model, config_list, statistics_batch_num=1)
+    model = pruner.compress()
+    print(model)
 
     x= torch.randn(1,3,384,224).cuda()
     summary(model,x)
