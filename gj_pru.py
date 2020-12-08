@@ -13,7 +13,7 @@ def load_t_net():
     model_file = "results/ayush/R_hierarchical2_mc/B0.1_R1.0_PL1-0_LR0.0004_BS4_Oadam/checkpoints/0020.pth"
     model_parameters = torch.load(model_file)
     new_model.load_state_dict(model_parameters)
-    return new_model
+    return new_model.module
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', action='store', default='../zhibo_folder',
@@ -55,11 +55,35 @@ if args.model:
 print('旧模型: ', model)
 total = 0
 i = 0
+model.eval()
+step = 0
+mask =[]
+def make_mask(model):
+    global step
+    global mask
+    step = 0
+    for name, param in model.named_parameters():
+        if 'weight' in name:
+            step = step + 1
+    mask = [None]* step
+    step = 0
+    for name, param in model.named_parameters():
+        if 'weight' in name:
+            tensor = param.data.cpu().numpy()
+            mask[step] = np.ones_like(tensor)
+            step = step + 1
+    step = 0
+make_mask(model)
+print(mask)
+
 for m in model.modules():
-    if isinstance(m, nn.BatchNorm2d):
+    
+    if isinstance(m, nn.Conv2d):
         if i < layers - 1:
             i += 1
-            total += m.weight.data.shape[0]
+            if not  m.weight is None:
+                print(m,m.weight.shape)
+                total += m.weight.data.shape[0]
 
 # 确定剪枝的全局阈值
 bn = torch.zeros(total)
