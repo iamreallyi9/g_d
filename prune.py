@@ -5,6 +5,10 @@ from torch import nn
 import torch.nn.utils.prune as prune
 import torch.nn.functional as F
 import os.path
+from utils.torch_helpers import to_device
+import torch.autograd as autograd
+from PIL import Image
+
 def new_prune():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -97,8 +101,55 @@ def test_big():
 def load_pru_mod():
     path = "./gj_dir/after.pth.tar"
     model = torch.load(path)
-    x = torch.randn(1,3,384,224)
-    summary(model, x)
+    return model
+
+
+def see_t_net():
+    # 记得修改batchsize
+    # net = load_t_net()
+    net = load_pru_mod()
+    data_loader = gj_dataset.use_this_data()
+    # data_loader = load_data()
+    net.eval()
+    num = 0
+    for data in data_loader:
+        num += 1
+        data = to_device(data)
+        stacked_images = data
+        # stacked_images, metadata = data
+        # frame_id = metadata["frame_id"][0]
+        images = autograd.Variable(stacked_images.cuda(), requires_grad=False)
+
+        # Reshape ...CHW -> XCHW
+        shape = images.shape
+
+        C, H, W = shape[-3:]
+        # images = images.reshape(-1, C, H, W).cuda().double()
+        # images = images.reshape(-1,W,C,H).cuda().double()
+        images = images.transpose(1, 3)
+        images = images.transpose(2, 3)
+        print(images.shape)
+        # depth = nmodel.forward(stacked_images, metadata)
+        # print(depth)
+        prediction_d = net.forward(images)[0]  # 0is depth .1 is confidence
+
+        print("================")
+        out_shape = shape[:-3] + prediction_d.shape[-2:]
+        print(out_shape)
+        prediction_d = prediction_d.reshape(out_shape)
+
+        prediction_d = torch.exp(prediction_d)
+        depth = prediction_d.squeeze(-3)
+        print(depth.shape)
+        print("///////////////////")
+        depth = depth.detach().cpu().numpy().squeeze()
+        inv_depth = 1.0 / depth * 255
+        im = Image.fromarray(inv_depth)
+        if im.mode == "F":
+            im = im.convert("L")
+        im.save("gj_TS/" + str(num + 1000) + ".jpg")
+        print("ok")
+
 
 if __name__ == '__main__':
     load_pru_mod()
