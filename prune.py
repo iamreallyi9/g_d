@@ -8,6 +8,11 @@ import os.path
 from utils.torch_helpers import to_device
 import torch.autograd as autograd
 from PIL import Image
+import gj_dataset
+import nyu_set
+import torch.optim as optim
+from tensorboardX import SummaryWriter
+import torchvision.transforms as transforms
 
 def new_prune():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -98,58 +103,108 @@ def test_big():
     #prune.remove(model,'weight')
     torch.save(model, 'gj_dir/after.pth.tar')
 
-def load_pru_mod():
-    path = "./gj_dir/after.pth.tar"
+def load_pru_mod(after_finetune =False):
+    if after_finetune ==False:
+        path = "./gj_dir/after.pth.tar"
+    else:
+        path = "./gj_dir/after_nyu.pth.tar"
     model = torch.load(path)
     return model
 
+def benchmark_pruned():
 
-def see_t_net():
-    # 记得修改batchsize
-    # net = load_t_net()
-    net = load_pru_mod()
-    data_loader = gj_dataset.use_this_data()
-    # data_loader = load_data()
+    net = load_pru_mod(after_finetune=True).double()
+    data_loader = nyu_set.use_nyu_data(batch_s=1,max_len=100,isBenchmark=True)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    criterion = nn.MSELoss(reduction='mean').to(device)
     net.eval()
+    loss = []
     num = 0
-    for data in data_loader:
+    for data,label in data_loader:
         num += 1
-        data = to_device(data)
-        stacked_images = data
-        # stacked_images, metadata = data
-        # frame_id = metadata["frame_id"][0]
+        stacked_images = to_device(data)
+
         images = autograd.Variable(stacked_images.cuda(), requires_grad=False)
 
         # Reshape ...CHW -> XCHW
         shape = images.shape
-
-        C, H, W = shape[-3:]
-        # images = images.reshape(-1, C, H, W).cuda().double()
-        # images = images.reshape(-1,W,C,H).cuda().double()
-        images = images.transpose(1, 3)
-        images = images.transpose(2, 3)
-        print(images.shape)
         # depth = nmodel.forward(stacked_images, metadata)
         # print(depth)
         prediction_d = net.forward(images)[0]  # 0is depth .1 is confidence
 
-        print("================")
-        out_shape = shape[:-3] + prediction_d.shape[-2:]
-        print(out_shape)
-        prediction_d = prediction_d.reshape(out_shape)
 
+        out_shape = shape[:-3] + prediction_d.shape[-2:]
+        prediction_d = prediction_d.reshape(out_shape)
         prediction_d = torch.exp(prediction_d)
         depth = prediction_d.squeeze(-3)
-        print(depth.shape)
-        print("///////////////////")
         depth = depth.detach().cpu().numpy().squeeze()
         inv_depth = 1.0 / depth * 255
+
+        error = criterion(inv_depth, label).item()
+        print(error)
+        loss.append(error)
         im = Image.fromarray(inv_depth)
         if im.mode == "F":
             im = im.convert("L")
         im.save("gj_TS/" + str(num + 1000) + ".jpg")
         print("ok")
 
+def train_pru_mod(epoch =100,batch =4,lr=0.001):
+    net = load_pru_mod(after_finetune=False)
+    train_Data = nyu_set.use_nyu_data(batch_s=batch,max_len=12,isBenchmark=False)
+    writer1 = SummaryWriter('./gj_dir/train_pru_mod')
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    criterion = nn.MSELoss(reduction='mean').to(device)
+    optimizer = optim.Adam(net.parameters(), lr=lr)
+
+    net.to(device)
+    net.train()
+    import time
+    for epoch in range(epoch):
+        time_start = time.time()
+        batch_size =batch
+
+        for i, data in enumerate(train_Data):
+            images ,depths = data
+            # images = autograd.Variable(inputs.cuda(), requires_grad=False)
+
+            images = images.to(device).double()
+            # labels = labels.to(device).double()
+
+            optimizer.zero_grad()
+            # debug_img = transforms.ToPILImage()(images[0,:,:,:].float().cpu())
+            # debug_img.save("debug.jpg")
+
+            output_net = net(images)[0].to(device)
+
+            # loss1 = 1 - s_loss.forward(output_s_features, T_mid_feature[0])
+            # loss2 = criterion(output_s_depth,output_t)
+            loss = criterion(output_net, depths)
+
+            loss.backward()
+            optimizer.step()
+
+            print('[%d, %5d] loss: %.4f' % (
+                epoch + 1, (i + 1) * batch_size, loss.item()))
+
+            writer1.add_scalar('loss', loss.item(), global_step=epoch*i)
+        debug_img = transforms.ToPILImage()(output_net)
+
+        writer1.add_images('depth',output_net,
+                         global_step=epoch)
+
+        torch.save(net, "./gj_dir/after_nyu.pth.tar")
+        time_end = time.time()
+        print('Time cost:', time_end - time_start, "s")
+
+    print('Finished Training')
+
+
 
 if __name__ == '__main__':
-    load_pru_mod()
+    torch.set_default_tensor_type(torch.DoubleTensor)
+    train_pru_mod(epoch=1,batch=4,lr=0.0001)
+    #load_pru_mod()
+    #see_t_net()
+ 
