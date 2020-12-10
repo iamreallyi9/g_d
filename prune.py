@@ -13,6 +13,8 @@ import nyu_set
 import torch.optim as optim
 from tensorboardX import SummaryWriter
 import torchvision.transforms as transforms
+from monodepth.mannequin_challenge.models.networks import LaplacianLayer,JointLoss
+
 
 def new_prune():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -150,12 +152,14 @@ def benchmark_pruned():
         print("ok")
 
 def train_pru_mod(epoch =100,batch =4,lr=0.001):
-    net = load_pru_mod(after_finetune=False)
-    train_Data = nyu_set.use_nyu_data(batch_s=batch,max_len=12,isBenchmark=False)
+    net = load_pru_mod(after_finetune=False).double()
+    train_Data = nyu_set.use_nyu_data(batch_s=batch,max_len=100,isBenchmark=False)
     writer1 = SummaryWriter('./gj_dir/train_pru_mod')
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     criterion = nn.MSELoss(reduction='mean').to(device)
+    Joint = JointLoss(opt = None)
+
     optimizer = optim.Adam(net.parameters(), lr=lr)
 
     net.to(device)
@@ -169,6 +173,7 @@ def train_pru_mod(epoch =100,batch =4,lr=0.001):
             images ,depths = data
             # images = autograd.Variable(inputs.cuda(), requires_grad=False)
 
+            depths = depths.to(device).double()
             images = images.to(device).double()
             # labels = labels.to(device).double()
 
@@ -180,16 +185,22 @@ def train_pru_mod(epoch =100,batch =4,lr=0.001):
 
             # loss1 = 1 - s_loss.forward(output_s_features, T_mid_feature[0])
             # loss2 = criterion(output_s_depth,output_t)
-            loss = criterion(output_net, depths)
+            loss1 = criterion(output_net, depths)
+            loss2 = Joint.LaplacianSmoothnessLoss(output_net,images)
+            loss3 = Joint.compute_image_aware_2nd_smoothness_cost(output_net,images)
+            loss4 = Joint.compute_image_aware_1st_smoothness_cost(output_net,images)
+
+            loss = loss1+loss2+loss3+loss4
 
             loss.backward()
             optimizer.step()
 
-            print('[%d, %5d] loss: %.4f' % (
-                epoch + 1, (i + 1) * batch_size, loss.item()))
+            print('[%d, %5d] loss: %.4f  A:%.4f  B:%.4f C:%.4f D:%.4f'  % (
+                epoch + 1, (i + 1) * batch_size, loss.item(),loss1.item(),loss2.item(),loss3.item(),loss4.item()))
 
-            writer1.add_scalar('loss', loss.item(), global_step=epoch*i)
-        debug_img = transforms.ToPILImage()(output_net)
+            writer1.add_scalar('loss', loss.item(), global_step=(epoch+1)*batch_size+i)
+            writer1.add_scalar('loss2', loss2.item(), global_step=(epoch+1)*batch_size+i)
+        #debug_img = transforms.ToPILImage()(output_net)
 
         writer1.add_images('depth',output_net,
                          global_step=epoch)
@@ -199,7 +210,11 @@ def train_pru_mod(epoch =100,batch =4,lr=0.001):
         print('Time cost:', time_end - time_start, "s")
 
     print('Finished Training')
-
+def see_pru_mod():
+    net = load_pru_mod(after_finetune=True)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    x =torch.randn(1,3,384,224).to(device)
+    summary(net,x)
 
 
 if __name__ == '__main__':
