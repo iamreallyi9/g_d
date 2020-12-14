@@ -123,8 +123,9 @@ def benchmark_pruned():
     net = net.cuda()
 
     data_loader = nyu_set.use_nyu_data(batch_s=4,max_len=100,isBenchmark=True)
-    writer1 = SummaryWriter('./gj_dir/benchmark_pru_mod')
+    writer1 = SummaryWriter('./gj_dir/benchmark_t_mod')
 
+    Joint = JointLoss(opt=None).double().cuda()
     criterion = nn.MSELoss(reduction='mean').cuda()
     net.eval()
 
@@ -132,12 +133,13 @@ def benchmark_pruned():
     for data,label in data_loader:
         num += 1
         target = label2target(label)
-        images = Variable(data).double().cuda()
+
+        images = autograd.Variable(images.double().cuda(), requires_grad=False)
 
         prediction_d = net.forward(images)[0]  # 0is depth .1 is confidence
 
-        e_rmse = JointLoss.compute_rmse_error(prediction_d, target)
-        e_rel = JointLoss.compute_l1_rel_error(prediction_d,target)
+        e_rmse = Joint.compute_rmse_error(prediction_d, target)
+        e_rel = Joint.compute_l1_rel_error(prediction_d,target)
         loss = criterion(prediction_d,target["depth_gt"])
         writer1.add_images('pre', prediction_d, global_step=num)
 
@@ -149,78 +151,6 @@ def benchmark_pruned():
 
         print("ok")
 
-def train_pru_mod(epoch =100,batch =4,lr=0.001):
-
-    #net = load_t_net().double()
-    net = load_pru_mod(after_finetune=True).double()
-    net = nn.DataParallel(net)
-    net = net.cuda()
-
-    train_Data = nyu_set.use_nyu_data(batch_s=batch,max_len=160,isBenchmark=False)
-    writer1 = SummaryWriter('./gj_dir/train_pru_mod')
-
-    criterion = nn.MSELoss(reduction='mean').cuda()
-    Joint = JointLoss(opt = None).double().cuda()
-    s_loss = ts_loss.SSIM().cuda()
-    optimizer = optim.Adam(net.parameters(), lr=lr)
-
-    net.train()
-    import time
-    for epoch in range(epoch):
-        time_start = time.time()
-        batch_size =batch
-
-        for i, data in enumerate(train_Data):
-            images ,depths = data
-            # images = autograd.Variable(inputs.cuda(), requires_grad=False)
-            images = Variable(images).double().cuda()
-            depths = Variable(depths).double().cuda()
-
-            # labels = labels.to(device).double()
-
-            optimizer.zero_grad()
-            # debug_img = transforms.ToPILImage()(images[0,:,:,:].float().cpu())
-            # debug_img.save("debug.jpg")
-
-            output_net = net(images)[0].double()
-
-            # loss1 = 1 - s_loss.forward(output_s_features, T_mid_feature[0])
-            # loss2 = criterion(output_s_depth,output_t)
-            loss1 = criterion(output_net, depths)
-            loss2 = Joint.LaplacianSmoothnessLoss(output_net,images)
-            loss3 = Joint.compute_image_aware_2nd_smoothness_cost(output_net,images)
-            #loss4 = Joint.compute_image_aware_1st_smoothness_cost(output_net,images)
-            loss4 =1- s_loss.forward(output_net,depths)
-            loss = loss1*10+loss2+loss3+loss4
-
-            loss.backward()
-            optimizer.step()
-
-            print('[%d, %5d] loss: %.4f  A:%.4f  B:%.4f C:%.4f D:%.4f'  % (
-                epoch + 1, (i + 1) * batch_size, loss.item(),loss1.item(),loss2.item(),loss3.item(),loss4.item()))
-
-            writer1.add_scalar('loss', loss.item(), global_step=(epoch+1)*batch_size+i)
-            writer1.add_scalar('loss2', loss2.item(), global_step=(epoch+1)*batch_size+i)
-        #debug_img = transforms.ToPILImage()(output_net)
-        writer1.add_images('pre',output_net,  global_step=epoch)
-        shape = images.shape
-        
-        dep = torch.exp(output_net)
-        
-               
-        dep = dep.detach().cpu().numpy()
-        inv_dep = 1.0/dep*255
-        
-        writer1.add_images('pro-dep',inv_dep,  global_step=epoch)
-        
-        writer1.add_images('labels',depths,global_step=epoch)
-
-        torch.save(net.module, "./gj_dir/after_nyu.pth.tar")
-        time_end = time.time()
-        print('Time cost:', time_end - time_start, "s")
-
-    print('Finished Training')
-
 def see_pru_mod():
     net = load_pru_mod(after_finetune=True)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -230,8 +160,9 @@ def see_pru_mod():
 def label2target(label):
     targets = {}
     mask = torch.ones(label.shape)
-    targets['gt_mask'] = Variable(mask).double().cuda()
-    targets['depth_gt'] = Variable(label).double().cuda()
+    mask = autograd.Variable(mask.double().cuda(), requires_grad=False)
+    targets['gt_mask'] = mask
+    targets['depth_gt'] = autograd.Variable(label.double().cuda(), requires_grad=False)
     return targets
 
 
