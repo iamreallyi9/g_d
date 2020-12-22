@@ -18,6 +18,9 @@ from torchvision import transforms
 
 import networks
 from layers import disp_to_depth
+import nyu_set
+from tensorboardX import SummaryWriter
+from monodepth.monodepth2.layers import compute_depth_errors
 
 
 def parse_args():
@@ -69,43 +72,51 @@ def inference(args):
         device = torch.device("cpu")
 
     encoder, decoder, thisH, thisW = prepare_model_for_test(args, device)
-    image_path = args.image_path
-    print("-> Inferencing on image ", image_path)
+    
+    data_loader = nyu_set.use_nyu_data(batch_s=4, max_len=100, isBenchmark=True)
+    writer1 = SummaryWriter('/data/consistent_depth/gj_dir/benchmark_pp')
 
     with torch.no_grad():
-        # Load image and preprocess
-        input_image = pil.open(image_path).convert('RGB')
-        extension = image_path.split('.')[-1]
-        original_width, original_height = input_image.size
-        input_image = input_image.resize((thisH, thisW), pil.LANCZOS)
-        input_image = transforms.ToTensor()(input_image).unsqueeze(0)
+        num = 0
+        for data,label in data_loader:
+            num +=1
+            label = label.cpu()
+            input_image = transforms.ToPILImage()(data)
+            original_width, original_height = input_image.size
+            input_image = input_image.resize((thisH, thisW), pil.LANCZOS)
+            input_image = transforms.ToTensor()(input_image).unsqueeze(0)
 
-        # PREDICTION
-        input_image = input_image.to(device)
-        outputs = decoder(encoder(input_image))
+            input_image = input_image.to(device)
+            outputs = decoder(encoder(input_image))
 
-        disp = outputs[("disp", 0)]
-        disp_resized = torch.nn.functional.interpolate(
-            disp, (original_height, original_width), mode="bilinear", align_corners=False)
+            disp = outputs[("disp", 0)]
+            disp_resized = torch.nn.functional.interpolate(
+                disp, (original_height, original_width), mode="bilinear", align_corners=False)
 
-        # Saving numpy file
-        name_dest_npy = image_path.replace('.' + extension, '_depth.npy')
-        print("-> Saving depth npy to ", name_dest_npy)
-        scaled_disp, _ = disp_to_depth(disp, 0.1, 10)
-        np.save(name_dest_npy, scaled_disp.cpu().numpy())
+            disp_resized_np = disp_resized.squeeze().cpu().numpy()
+            abs_rel, sq_rel, rmse, rmse_log, a1, a2, a3 = compute_depth_errors(label, disp_resized_np)
 
+            for ind, ten in enumerate(disp_resized):
+                disp_resized[ind] = torch.div(disp_resized[ind], torch.max(disp_resized[ind]))
+
+                # prediction_d = torch.mul(255,prediction_d)
+
+            writer1.add_images('pre', disp_resized, global_step=num)
+
+            writer1.add_scalar('rmse', rmse, global_step=num)
+            writer1.add_scalar("abs_rel", abs_rel, global_step=num)
+            writer1.add_scalar('sq_rel', sq_rel, global_step=num)
+            writer1.add_scalar('rmse_log', rmse_log, global_step=num)
+            writer1.add_scalar('a1', a1, global_step=num)
+            writer1.add_scalar('a2', a2, global_step=num)
+            writer1.add_scalar('a3', a3, global_step=num)
+
+            writer1.add_images('label', label, global_step=num)
+
+        #scaled_disp, _ = disp_to_depth(disp, 0.1, 10)
         # Saving colormapped depth image
-        disp_resized_np = disp_resized.squeeze().cpu().numpy()
-        vmax = np.percentile(disp_resized_np, 95)
-        normalizer = mpl.colors.Normalize(vmin=disp_resized_np.min(), vmax=vmax)
-        mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')
-        colormapped_im = (mapper.to_rgba(disp_resized_np)[:, :, :3] * 255).astype(np.uint8)
-        im = pil.fromarray(colormapped_im)
-
-        name_dest_im = image_path.replace('.' + extension, '_depth.png')
-        print("-> Saving depth png to ", name_dest_im)
-        im.save(name_dest_im)
-
+        #vmax = np.percentile(disp_resized_np, 95)
+    writer1.close()
     print('-> Done!')
 
 
