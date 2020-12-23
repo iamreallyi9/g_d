@@ -1,5 +1,5 @@
 import torch.nn as nn
-import torch.nn.functional as F
+
 import torch
 from torch.utils.data import DataLoader
 from gj_hourglass import HourglassModel
@@ -7,17 +7,16 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 
 from loaders.video_dataset import VideoDataset, VideoFrameDataset
-import torchvision.transforms as transforms
 
-from utils.torch_helpers import to_device
+from torch.autograd import Variable
 from torchsummaryX import summary
-import torch.autograd as autograd
-import numpy as np
+
 import ts_loss
 import small_model
 from PIL import Image
-import gj_dataset
+import nyu_set
 import numpy as np
+import os
 T_mid_feature=[]
 
 def load_data():
@@ -37,15 +36,15 @@ def load_t_net():
     new_model.load_state_dict(model_parameters)
     return new_model
 
-def load_s_net():
+def load_s_net(file =False):
+
     new_model = small_model.gNet()
-    new_model = torch.nn.DataParallel(new_model)
-    #new_model = torch.nn.DataParallel(new_model).module
-    model_file = "gj_TS/student_big_data.pth"
-    #model_file = "gj_TS/0020.pth"
-    #model_file = "gj_TS/student.pth"
-    model_parameters = torch.load(model_file)
-    new_model.load_state_dict(model_parameters)
+    if file == False:
+        return new_model
+    else:
+        path = "./gj_dir/stu.pth"
+        model_parameters = torch.load(path)
+        new_model.load_state_dict(model_parameters)
     return new_model
 
 def id2image(id,trans):
@@ -61,53 +60,6 @@ def id2image(id,trans):
     print(labels.shape)
     #id =id.item()
     return labels
-
-def see_t_net():
-    # 记得修改batchsize
-    #net = load_t_net()
-    net =load_s_net()
-    data_loader = gj_dataset.use_this_data()
-    #data_loader = load_data()
-    net.eval()
-    num = 0
-    for data in data_loader:
-        num +=1
-        data = to_device(data)
-        stacked_images = data
-        #stacked_images, metadata = data
-        #frame_id = metadata["frame_id"][0]
-        images = autograd.Variable(stacked_images.cuda(), requires_grad=False)
-
-        # Reshape ...CHW -> XCHW
-        shape = images.shape
-
-        C, H, W = shape[-3:]
-        #images = images.reshape(-1, C, H, W).cuda().double()
-        #images = images.reshape(-1,W,C,H).cuda().double()
-        images = images.transpose(1,3)
-        images = images.transpose(2,3)
-        print(images.shape)
-        # depth = nmodel.forward(stacked_images, metadata)
-        # print(depth)
-        prediction_d = net.forward(images)[0]  # 0is depth .1 is confidence
-
-    
-        print("================")
-        out_shape = shape[:-3] + prediction_d.shape[-2:]
-        print(out_shape)
-        prediction_d = prediction_d.reshape(out_shape)
-
-        prediction_d = torch.exp(prediction_d)
-        depth = prediction_d.squeeze(-3)
-        print(depth.shape)
-        print("///////////////////")
-        depth = depth.detach().cpu().numpy().squeeze()
-        inv_depth = 1.0 / depth * 255
-        im = Image.fromarray(inv_depth)
-        if im.mode == "F":
-            im = im.convert("L")
-        im.save("gj_TS/"+str(num+1000)+".jpg")
-        print("ok")
 
 
 def hook(module, inputdata, output):
@@ -138,97 +90,90 @@ def make_my_model():
     x = torch.randn(1, 3, 384, 224)
     summary(net,x)
 
-def compare():
+def label2target(label):
+    targets = {}
+    mask = torch.ones(label.shape)
+    targets['gt_mask'] = mask.cuda()
+    targets['depth_gt'] = label.cuda()
+    return targets
+
+def compare(batch=16,lr=0.01,epo=100):
     global T_mid_feature
     # 数据集
-    data_loader =load_data()
     #teacher——net
     net_t = load_t_net()
+    net_t = nn.DataParallel(net_t)
+    net_t = net_t.cuda()
 
     #student——net
-    #net_s = load_s_net()
-    net_s = small_model.gNet()
+    net_s = load_s_net(file =False)
     net_s = nn.DataParallel(net_s)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    criterion = nn.MSELoss(reduction='mean').to(device)
+    net_s = net_s.cuda()
 
-    criterion2 = nn.KLDivLoss()
-
+    train_Data = nyu_set.use_nyu_data(batch_s=batch, max_len=160, isBenchmark=False)
+    writer1 = SummaryWriter('./gj_dir/train_pru_mod')
     optimizer = optim.Adam(net_s.parameters(), lr=0.001)
 
+    Joint = ts_loss.JointLoss(opt=None).double().cuda()
+    s_loss = ts_loss.SSIM().cuda()
+    optimizer = optim.Adam(net_s.parameters(), lr=lr)
 
-    print(device)
-    net_s.to(device)
-    net_t.to(device)
 
-    s_loss = ts_loss.SSIM().to(device)
-    transf=transforms.ToTensor()
     net_t.eval()
     net_s.train()
     import time
-    for epoch in range(1):
+    for epoch in range(epo):
         time_start = time.time()
-        running_loss = 0.
-        batch_size = 2
 
         alpha = 0.7
 
-        for i, data in enumerate( data_loader):
+        for i, data in enumerate( train_Data):
             images, labels = data
-            #labels = id2image(labels['frame_id'],transf)
-
-            #images = autograd.Variable(inputs.cuda(), requires_grad=False)
-            # Reshape ...CHW -> XCHW
-            shape = images.shape
-
-            C, H, W = shape[-3:]
-            images = images.reshape(-1, C, H, W)
-            print(images.shape)
-            images = images.to(device).double()
-            #labels = labels.to(device).double()
+            images = Variable(images).double().cuda()
+            target = label2target(labels)
 
             optimizer.zero_grad()
 
             #注册一个hook
             hh = net_t.module.seq[3].list[0][3].list[0][3].list[1][3].list[0][1].register_forward_hook(hook)
 
-            output_t = net_t(images)[0].to(device)
+            output_t = net_t(images)[0].double()
+            output_t = torch.div(1.0, torch.exp(output_t))
             output_s_depth,output_s_features= net_s(images)
-            output_s_features = output_s_features.to(device)
-            output_s_depth = output_s_depth.to(device)
 
             #注销hook
             hh.remove()
-            #loss1 = 1 - s_loss.forward(output_s_features, T_mid_feature[0])
-            #loss2 = criterion(output_s_depth,output_t)
-            loss1 = criterion(output_s_features, T_mid_feature[0])
-            loss2 = 1 - s_loss.forward(output_s_depth,output_t)
-
-            loss = loss1 * (1 - alpha) + loss2 * alpha
-            loss.backward()
+            TS_loss = 1-s_loss.forward(output_s_features,T_mid_feature[0])
+            loss, loss1, loss2, loss3 = Joint(images, torch.log(output_s_depth), target)
+            loss_all = loss+TS_loss
+            loss_all.backward()
             optimizer.step()
 
-            print('[%d, %5d] loss: %.4f loss1: %.4f loss2: %.4f' % (
-            epoch + 1, (i + 1) * batch_size, loss.item(), loss1.item(), loss2.item()))
+            print('[%d, %5d] loss: %.4f  A:%.4f  B:%.4f C:%.4f D:%.4f' % (
+                epoch + 1, (i + 1) * batch, loss.item(), loss1, loss2, loss3, torch.min(output_s_depth).item()))
 
-        torch.save(net_s.state_dict(), 'gj_TS/student.pth')
+        writer1.add_scalar('loss', loss.item(), global_step=(epoch + 1))
+        writer1.add_scalar('loss1', loss1, global_step=(epoch + 1))
+        writer1.add_scalar('loss2', loss2, global_step=(epoch + 1))
+        writer1.add_scalar('loss3', loss3, global_step=(epoch + 1))
+        # debug_img = transforms.ToPILImage()(output_net)
+        writer1.add_images('pre', output_s_depth, global_step=epoch)
+
+        writer1.add_images('labels', labels, global_step=epoch)
+
+        torch.save(net_s.state_dict(), 'gj_TS/stu.pth')
         time_end = time.time()
         print('Time cost:', time_end - time_start, "s")
 
     print('Finished Training')
-def see_raw():
-    a= load_data()
-    for i, data in enumerate( a):
-        images,_=data
-        debug_img = transforms.ToPILImage()(images[0, :, :, :].float().cpu())
-        debug_img.save("see_raw.jpg")
-        break
+
 
 
 if __name__ == '__main__':
     torch.set_default_tensor_type(torch.DoubleTensor)
-    #make_my_model()
-    #compare()
-    #see_t_net()
-    see_raw()
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0,1,2,3'
+    make_my_model()
+    compare(batch=16,lr=0.01,epo=1)
+
+
 
