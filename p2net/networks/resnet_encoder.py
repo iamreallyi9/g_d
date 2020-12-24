@@ -98,7 +98,7 @@ class ResnetEncoder(nn.Module):
         return self.features[-1]
 
 class gDecoder(nn.Module):
-    """Pytorch module for a resnet encoder
+    """改变后的decoder
     """
     def __init__(self, cfg=None):
         super(gDecoder, self).__init__()
