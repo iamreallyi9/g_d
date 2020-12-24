@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import torch.utils.model_zoo as model_zoo
-
+from torchsummaryX  import summary
 
 class ResNetMultiImageInput(models.ResNet):
     """Constructs a resnet model with varying number of input images.
@@ -95,4 +95,35 @@ class ResnetEncoder(nn.Module):
         self.features.append(self.encoder.layer3(self.features[-1]))
         self.features.append(self.encoder.layer4(self.features[-1]))
 
+        return self.features[-1]
+
+class gDecoder(nn.Module):
+    """Pytorch module for a resnet encoder
+    """
+    def __init__(self, cfg=None):
+        super(gDecoder, self).__init__()
+        if cfg is None:
+            self.cfg=[[219,32,2],
+                      [32,8,2],
+                      [8,4,4],
+                      [4,1,2]
+                      ]
+        else:self.cfg=cfg
+
+        self.layers = self._make_layers(self.cfg)
+
+    def _make_layers(self, cfg):
+        layers = []
+        for in_planes, out_planes, s_factor in self.cfg:
+
+            layers.append(torch.nn.Upsample(scale_factor=s_factor, mode="nearest"))
+            layers.append(torch.nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=1, padding=1))
+            layers.append(torch.nn.ReLU())
+
+        return nn.Sequential(*layers)
+    def forward(self, input_image):
+        self.features =self.layers(input_image)
         return self.features
+
+
+
